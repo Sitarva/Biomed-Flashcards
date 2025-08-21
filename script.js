@@ -455,12 +455,14 @@ if (document.getElementById("editFlashcardsContainer")) {
     const card = deck[pos];
     titleEl.textContent = card.stem || "Study";
 
+    // Front
     frontContainer.innerHTML = `<div class="content-body">${
       card.frontHtml || '<span class="muted">[No front]</span>'
     }${
       card.frontImage ? `<img src="${card.frontImage}" class="flash-image">` : ""
     }</div>`;
 
+    // Back
     const questionText = plainTextFromHtml(card.frontHtml) || "[No question]";
     backContainer.innerHTML = `<div class="content-title">${questionText}</div><div class="content-body">${
       card.backHtml || '<span class="muted">[No answer]</span>'
@@ -468,8 +470,8 @@ if (document.getElementById("editFlashcardsContainer")) {
       card.backImage ? `<img src="${card.backImage}" class="flash-image">` : ""
     }</div>`;
 
-    const inner = flipCard.querySelector(".flip-card-inner");
-    if (inner) inner.classList.remove("is-flipped");
+    // Always show front initially
+    flipCard.classList.remove("flipped");
 
     prevBtn.disabled = pos === 0;
     nextBtn.disabled = pos === deck.length - 1;
@@ -483,9 +485,9 @@ if (document.getElementById("editFlashcardsContainer")) {
     renderCard();
   }
 
+  // Flip card click
   flipCard.onclick = () => {
-    const inner = flipCard.querySelector(".flip-card-inner");
-    if (inner) inner.classList.toggle("is-flipped");
+    flipCard.classList.toggle("flipped");
   };
 
   prevBtn.onclick = () => {
