@@ -376,11 +376,12 @@ function confirmRemoveCases() {
 // ---------------------------
 window.addEventListener("DOMContentLoaded", rebuildHomeGrid);
 
+// Sortable init for flashcards
 if (document.getElementById("flashcardsContainer")) {
   new Sortable(document.getElementById("flashcardsContainer"), {
-    handle: ".flashcard-header", // can only drag by header
+    handle: ".flashcard-header",
     animation: 150,
-    draggable: ".flashcard", // only these elements are draggable
+    draggable: ".flashcard",
     onEnd: function () {
       const cards = document
         .getElementById("flashcardsContainer")
@@ -392,7 +393,6 @@ if (document.getElementById("flashcardsContainer")) {
     },
   });
 }
-
 if (document.getElementById("editFlashcardsContainer")) {
   new Sortable(document.getElementById("editFlashcardsContainer"), {
     handle: ".flashcard-header",
@@ -411,14 +411,10 @@ if (document.getElementById("editFlashcardsContainer")) {
 }
 
 // ---------------------------
-// Global function to study a deck
+// Study Mode
 // ---------------------------
-function studyDeck(deck) {
-  if (!deck || deck.length === 0) {
-    alert("No cards to study.");
-    return;
-  }
-
+(() => {
+  const startBtn = document.getElementById("startStudyBtn");
   const modal = document.getElementById("studyModal");
   const flipCard = document.getElementById("studyFlipCard");
   const frontContainer = document.getElementById("studyFrontContainer");
@@ -429,37 +425,69 @@ function studyDeck(deck) {
   const progressEl = document.getElementById("studyProgress");
   const titleEl = document.getElementById("studyTitle");
 
+  let deck = [];
   let pos = 0;
 
+  function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+  }
+
+  function plainTextFromHtml(html) {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html || "";
+    return (tmp.textContent || tmp.innerText || "").replace(/\s+/g, " ").trim();
+  }
+
   function renderCard() {
+    if (!deck.length) {
+      titleEl.textContent = "Study";
+      frontContainer.innerHTML =
+        '<div class="content-body muted">No cards to study.</div>';
+      backContainer.innerHTML = "";
+      progressEl.textContent = "Card 0 of 0";
+      prevBtn.disabled = nextBtn.disabled = true;
+      return;
+    }
+
     const card = deck[pos];
     titleEl.textContent = card.stem || "Study";
+
     frontContainer.innerHTML = `<div class="content-body">${
       card.frontHtml || '<span class="muted">[No front]</span>'
     }${
       card.frontImage ? `<img src="${card.frontImage}" class="flash-image">` : ""
     }</div>`;
-    const questionText =
-      (card.frontHtml || "").replace(/<[^>]+>/g, "") || "[No question]";
+
+    const questionText = plainTextFromHtml(card.frontHtml) || "[No question]";
     backContainer.innerHTML = `<div class="content-title">${questionText}</div><div class="content-body">${
       card.backHtml || '<span class="muted">[No answer]</span>'
     }${
       card.backImage ? `<img src="${card.backImage}" class="flash-image">` : ""
     }</div>`;
+
     const inner = flipCard.querySelector(".flip-card-inner");
     if (inner) inner.classList.remove("is-flipped");
+
     prevBtn.disabled = pos === 0;
     nextBtn.disabled = pos === deck.length - 1;
     progressEl.textContent = `Card ${pos + 1} of ${deck.length}`;
   }
 
-  modal.hidden = false;
-  renderCard();
+  function studyDeck(newDeck) {
+    deck = newDeck || [];
+    pos = 0;
+    modal.hidden = false;
+    renderCard();
+  }
 
   flipCard.onclick = () => {
     const inner = flipCard.querySelector(".flip-card-inner");
     if (inner) inner.classList.toggle("is-flipped");
   };
+
   prevBtn.onclick = () => {
     if (pos > 0) {
       pos--;
@@ -473,21 +501,8 @@ function studyDeck(deck) {
     }
   };
   closeBtn.onclick = () => (modal.hidden = true);
-}
 
-// ---------------------------
-// Build deck for Start Study (all cases, shuffled)
-// ---------------------------
-(() => {
-  const startBtn = document.getElementById("startStudyBtn");
-
-  function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
-    }
-  }
-
+  // Start Study button (all cases shuffled)
   startBtn?.addEventListener("click", (e) => {
     e?.preventDefault();
     const cases = getCases() || [];
@@ -498,16 +513,15 @@ function studyDeck(deck) {
 
     shuffleArray(cases);
 
-    const deck = [];
+    const combinedDeck = [];
     cases.forEach((c) => {
-      if (!c.flashcards || !c.flashcards.length) return;
-      const stem =
-        c.stems && c.stems.length
-          ? c.stems[Math.floor(Math.random() * c.stems.length)]
-          : "";
+      if (!c.flashcards?.length) return;
+      const stem = c.stems?.length
+        ? c.stems[Math.floor(Math.random() * c.stems.length)]
+        : "";
       c.flashcards.forEach((fc) => {
-        deck.push({
-          stem: stem || "",
+        combinedDeck.push({
+          stem,
           frontHtml: fc.front || "",
           backHtml: fc.back || "",
           frontImage: fc.frontImage || null,
@@ -516,36 +530,33 @@ function studyDeck(deck) {
       });
     });
 
-    studyDeck(deck);
+    studyDeck(combinedDeck);
   });
-})();
 
-// ---------------------------
-// Build deck for single case
-// ---------------------------
-function studySingleCase(index) {
-  const cases = getCases();
-  const c = cases[index];
-  if (!c || !c.flashcards || !c.flashcards.length) {
-    alert("No flashcards for this case.");
-    return;
-  }
+  // Open a single case
+  window.openCaseStudy = function (index) {
+    const cases = getCases();
+    const c = cases[index];
+    if (!c || !c.flashcards?.length) {
+      alert("No flashcards for this case.");
+      return;
+    }
 
-  const stem =
-    c.stems && c.stems.length
+    const stem = c.stems?.length
       ? c.stems[Math.floor(Math.random() * c.stems.length)]
       : "";
 
-  const deck = c.flashcards.map((fc) => ({
-    stem: stem || "",
-    frontHtml: fc.front || "",
-    backHtml: fc.back || "",
-    frontImage: fc.frontImage || null,
-    backImage: fc.backImage || null,
-  }));
+    const caseDeck = c.flashcards.map((fc) => ({
+      stem,
+      frontHtml: fc.front || "",
+      backHtml: fc.back || "",
+      frontImage: fc.frontImage || null,
+      backImage: fc.backImage || null,
+    }));
 
-  studyDeck(deck);
-}
+    studyDeck(caseDeck);
+  };
+})();
 
 // ---------------------------
 // Modal Button Listeners
