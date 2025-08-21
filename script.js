@@ -411,7 +411,7 @@ if (document.getElementById("editFlashcardsContainer")) {
 }
 
 // ---------------------------
-// Study Mode
+// Study Mode (Unified & Fixed)
 // ---------------------------
 (() => {
   const startBtn = document.getElementById("startStudyBtn");
@@ -463,10 +463,31 @@ if (document.getElementById("editFlashcardsContainer")) {
       card.backHtml || '<span class="muted">[No answer]</span>'
     }${card.backImage ? `<img src="${card.backImage}" class="flash-image">` : ""}</div>`;
 
-    flipCard.classList.remove("flipped"); // always show front
+    flipCard.classList.remove("flipped");
     prevBtn.disabled = pos === 0;
     nextBtn.disabled = pos === deck.length - 1;
     progressEl.textContent = `Card ${pos + 1} of ${deck.length}`;
+  }
+
+  function buildStudyDeck(caseIndex = null, shuffle = true) {
+    const cases = getCases();
+    let selectedCases = [];
+
+    if (caseIndex !== null) {
+      if (!cases[caseIndex]?.flashcards?.length) return [];
+      selectedCases.push(cases[caseIndex]);
+    } else {
+      selectedCases = cases.filter(c => c.flashcards?.length);
+    }
+
+    const newDeck = [];
+    selectedCases.forEach(c => {
+      const stem = c.stems?.length ? c.stems[Math.floor(Math.random() * c.stems.length)] : "";
+      c.flashcards.forEach(fc => newDeck.push({ stem, ...fc }));
+    });
+
+    if (shuffle) shuffleArray(newDeck);
+    return newDeck;
   }
 
   function studyDeck(newDeck) {
@@ -483,28 +504,15 @@ if (document.getElementById("editFlashcardsContainer")) {
 
   startBtn?.addEventListener("click", (e) => {
     e.preventDefault();
-    const cases = getCases();
-    if (!cases.length) return alert("No flashcards found.");
-
-    shuffleArray(cases);
-    const combinedDeck = [];
-    cases.forEach(c => {
-      if (!c.flashcards?.length) return;
-      const stem = c.stems?.length ? c.stems[Math.floor(Math.random() * c.stems.length)] : "";
-      c.flashcards.forEach(fc => combinedDeck.push({ stem, ...fc }));
-    });
-
-    studyDeck(combinedDeck);
+    const newDeck = buildStudyDeck(null, true); // All cases shuffled
+    if (!newDeck.length) return alert("No flashcards found.");
+    studyDeck(newDeck);
   });
 
   window.openCaseStudy = (index) => {
-    const cases = getCases();
-    const c = cases[index];
-    if (!c?.flashcards?.length) return alert("No flashcards for this case.");
-
-    const stem = c.stems?.length ? c.stems[Math.floor(Math.random() * c.stems.length)] : "";
-    const caseDeck = c.flashcards.map(fc => ({ stem, ...fc }));
-    studyDeck(caseDeck);
+    const newDeck = buildStudyDeck(index, false); // Single case, keep order
+    if (!newDeck.length) return alert("No flashcards for this case.");
+    studyDeck(newDeck);
   };
 })();
 
