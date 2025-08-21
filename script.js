@@ -411,7 +411,7 @@ if (document.getElementById("editFlashcardsContainer")) {
 }
 
 // ---------------------------
-// Study Mode / Flip Cards / Shuffle
+// Study Mode / Flip Cards / Shuffle (corrected)
 // ---------------------------
 (() => {
   const startBtn = document.getElementById("startStudyBtn");
@@ -439,7 +439,7 @@ if (document.getElementById("editFlashcardsContainer")) {
   function buildStudyDeck() {
     const cases = getCases() || [];
     studyDeck = [...cases].filter(c => c.flashcards && c.flashcards.length > 0);
-    shuffleArray(studyDeck);
+    shuffleArray(studyDeck);  // only shuffle the order of cases
     caseIndex = 0;
     cardIndex = 0;
   }
@@ -456,7 +456,7 @@ if (document.getElementById("editFlashcardsContainer")) {
       "&": "&amp;",
       "<": "&lt;",
       ">": "&gt;",
-      '"': "&quot;",
+      '"': "&quot;',
       "'": "&#39;",
     }[s]));
   }
