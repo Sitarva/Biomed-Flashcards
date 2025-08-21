@@ -1,0 +1,502 @@
+:root {
+  --btn-width: 280px;
+  --gap: 20px;
+  --breakpoint: 880px;
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  padding-top: 80px;
+  background-color: #f0f4f8;
+  margin: 0;
+  color: #1d1d1f;
+}
+h1 {
+  color: #333;
+  margin: 0 16px 30px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+a.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--btn-width);
+  padding: 15px 30px;
+  font-size: 16px;
+  color: #fff;
+  background-color: #007bff;
+  text-decoration: none;
+  border-radius: 12px;
+  transition: background-color 0.2s ease, transform 0.06s ease;
+  text-align: center;
+  white-space: nowrap;
+  user-select: none;
+}
+a.button:hover {
+  background-color: #066fe0;
+}
+a.button:active {
+  transform: translateY(1px);
+}
+
+.top-grid {
+  display: grid;
+  grid-template-columns: repeat(3, var(--btn-width));
+  justify-content: center;
+  column-gap: var(--gap);
+  row-gap: var(--gap);
+  margin: 0 auto 32px;
+  padding: 0 16px;
+  max-width: calc(3 * var(--btn-width) + 2 * var(--gap) + 32px);
+}
+.top-grid .start {
+  grid-column: 2;
+  justify-self: center;
+}
+
+.case-button-grid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, var(--btn-width));
+  justify-content: center;
+  gap: var(--gap);
+}
+
+.search-container {
+  margin: 30px 16px 0;
+}
+
+input[type="text"] {
+  padding: 10px 12px;
+  width: 100%;
+  max-width: 360px;
+  font-size: 16px;
+  border: 1px solid #c9c9c9;
+  border-radius: 8px;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+input[type="text"]:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
+}
+
+.cases-container {
+  margin-top: 40px;
+  padding: 0 20px 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  justify-items: center;
+}
+.case-item {
+  background-color: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  padding: 16px;
+  width: 100%;
+  max-width: 280px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
+  transition: transform 0.08s ease, box-shadow 0.2s ease;
+}
+.case-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
+}
+.case-item a {
+  text-decoration: none;
+  color: #1d1d1f;
+  display: block;
+  line-height: 1.35;
+}
+
+[hidden] {
+  display: none !important;
+}
+.no-results {
+  grid-column: 1 / -1;
+  color: #6b7280;
+  padding: 8px 0;
+  font-size: 16px;
+  text-align: center;
+}
+
+@media (max-width: 600px), (max-width: 880px) {
+  .top-grid {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    max-width: none;
+  }
+  .top-grid .start {
+    grid-column: auto;
+  }
+  .case-button-grid {
+    grid-column: auto;
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+}
+
+/* Modals */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+.modal[hidden] {
+  display: none !important;
+}
+.modal-content {
+  background: #fff;
+  padding: 24px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 900px;
+  overflow-y: auto;
+  max-height: 90vh;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  margin: 0 auto;
+}
+.modal-content h2 {
+  margin-bottom: 16px;
+  font-size: 24px;
+  text-align: center;
+}
+.modal-content h3 {
+  margin-top: 24px;
+  font-size: 20px;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 6px;
+}
+
+.modal-content .action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+.modal-content button {
+  margin: 10px 6px 0;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  background-color: #007bff;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.modal-content button:hover {
+  background-color: #066fe0;
+}
+
+/* Stems */
+.stem-row {
+  display: center;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.stem-row input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+.icon-btn {
+  color: #dc3545;
+  background: #fff;
+  border: 1px solid #f1b4b8;
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.icon-btn:hover {
+  background: #ffe7e9;
+}
+.stem-row .icon-btn {
+  align-self: center;
+  margin: 0;
+}
+
+/* Flashcards */
+.flashcard {
+  background: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 12px;
+  margin: 16px 0;
+}
+.flashcard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #e9ecef;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-weight: 700;
+}
+.flashcard-header-title {
+  flex: 1; /* take up remaining space */
+  display: flex; /* keep chev + title aligned */
+  justify-content: center; /* center the whole group */
+  gap: 8px; /* spacing between chev and title */
+}
+.chev {
+  font-weight: 700;
+  user-select: none;
+}
+.flashcard-header .icon-btn {
+  align-self: center;
+  margin: 0;
+}
+.flashcard-body {
+  margin-top: 10px;
+}
+.flashcard.collapsed .flashcard-body {
+  display: none;
+}
+.label-inline {
+  display: inliåne-block;
+  margin: 6px 0 6px;
+  font-weight: 600;
+}
+.quill-editor {
+  background: #fff;
+}
+.flash-side {
+  margin-bottom: 10px;
+}
+
+/* Grids in modals (edit & remove) */
+.select-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 12px;
+}
+@media (max-width: 900px) {
+  .select-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .select-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.select-card {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  padding: 18px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.2s ease;
+}
+.select-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
+}
+.select-card.selected {
+  outline: 2px solid #007bff;
+}
+
+.no-results-inline {
+  color: #6b7280;
+  text-align: center;
+  margin-top: 10px;
+}
+
+/* Small helpers */
+.muted {
+  color: #6b7280;
+}
+.row-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+/* Flip-card styles for study UI */
+.flip-card {
+  perspective: 1100px;
+  margin: 12px auto;
+  width: 100%;
+  max-width: 760px;
+}
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(0.2, 0.9, 0.3, 1);
+  cursor: pointer;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+.flip-card.is-flipped .flip-card-inner {
+  transform: rotateY(180deg);
+}
+
+.flip-card-front,
+.flip-card-back {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 12px;
+  padding: 18px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 8px;
+}
+.flip-card-front {
+  background: #ffffff;
+}
+.flip-card-back {
+  background: #f8fafb;
+  transform: rotateY(180deg);
+}
+
+.flip-card .content-title {
+  font-weight: 700;
+  margin-bottom: 8px;
+  text-align: left;
+}
+.flip-card .content-body {
+  text-align: left;
+}
+
+/* Make images responsive inside the card */
+.flip-card img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+/* Controls: Prev  •  Close (center)  •  Next */
+.study-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.study-controls button {
+  min-width: 84px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  background: #007bff;
+  color: white;
+}
+.study-controls button:active {
+  transform: translateY(1px);
+}
+.study-controls button[disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Small tweak to center progress under controls */
+#studyProgress {
+  margin-top: 10px;
+  color: #6b7280;
+  text-align: center;
+}
+.flip-card {
+  min-height: 200px; /* ensures card is always visible */
+  max-width: 600px; /* keeps it a reasonable width */
+  margin: 0 auto; /* center horizontally */
+  perspective: 1000px; /* needed for 3D flip */
+}
+
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+}
+
+.flip-card.flipped .flip-card-inner {
+  transform: rotateY(180deg);
+}
+
+.flip-card-front,
+.flip-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  top: 0;
+  left: 0;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  background: #fff;
+  padding: 20px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.flip-card-back {
+  transform: rotateY(180deg);
+}
+.flip-card {
+  min-height: 300px; /* larger default height */
+  width: 50%; /* nearly full modal width */
+  max-width: 600px; /* constrain on desktop */
+  margin: 0 auto;
+  perspective: 1000px;
+}
+
+.flip-card-front,
+.flip-card-back {
+  min-height: 300px; /* match the flip-card container */
+}
+/* Front card: centered both vertically & horizontally */
+.flip-card-front {
+  display: flex;
+  justify-content: center; /* horizontal center */
+  align-items: center; /* vertical center */
+  text-align: center;
+  padding: 20px;
+}
+
+/* Back card: centered vertically, aligned left horizontally */
+.flip-card-back {
+  display: flex;
+  justify-content: flex-start; /* align left */
+  align-items: center; /* center vertically */
+  text-align: left;
+  padding: 20px;
+}
+.flash-image {
+  display: block;
+  margin-top: 12px;
+  max-width: 100%;
+  max-height: 200px;
+}
