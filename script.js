@@ -428,6 +428,12 @@ if (document.getElementById("editFlashcardsContainer")) {
   let deck = [];
   let pos = 0;
 
+  function plainTextFromHtml(html) {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html || "";
+    return (tmp.textContent || tmp.innerText || "").replace(/\s+/g, " ").trim();
+  }
+
   function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -435,34 +441,20 @@ if (document.getElementById("editFlashcardsContainer")) {
     }
   }
 
-  function plainTextFromHtml(html) {
-    const tmp = document.createElement("div");
-    tmp.innerHTML = html || "";
-    return (tmp.textContent || tmp.innerText || "").replace(/\s+/g, " ").trim();
-  }
-
-  function escapeHtml(str) {
-    if (str == null) return "";
-    return String(str).replace(/[&<>"']/g, (s) => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;",
-    }[s]));
-  }
-
-  function buildDeck() {
+  function buildDeck(casesToUse) {
     deck = [];
-    const cases = getCases() || [];
-    const casesWithFlashcards = cases.filter(c => c.flashcards && c.flashcards.length);
-    shuffleArray(casesWithFlashcards); // only shuffle cases
 
-    casesWithFlashcards.forEach(c => {
+    // Shuffle cases if this is the "Start Study" mode
+    const shuffledCases = Array.isArray(casesToUse) ? [...casesToUse] : [];
+    if (casesToUse.length > 1) shuffleArray(shuffledCases);
+
+    shuffledCases.forEach(c => {
       const stem = c.stems && c.stems.length
         ? c.stems[Math.floor(Math.random() * c.stems.length)]
         : "";
-      c.flashcards.forEach(fc => {
+
+      for (let i = 0; i < c.flashcards.length; i++) {
+        const fc = c.flashcards[i];
         deck.push({
           caseTitle: c.title,
           stem,
@@ -471,7 +463,7 @@ if (document.getElementById("editFlashcardsContainer")) {
           frontImage: fc.frontImage || null,
           backImage: fc.backImage || null
         });
-      });
+      }
     });
 
     pos = 0;
@@ -480,7 +472,8 @@ if (document.getElementById("editFlashcardsContainer")) {
   function renderCard() {
     if (!deck.length) {
       titleEl.textContent = "Study";
-      frontContainer.innerHTML = '<div class="content-body muted">No cards to study.</div>';
+      frontContainer.innerHTML =
+        '<div class="content-body muted">No cards to study.</div>';
       backContainer.innerHTML = "";
       progressEl.textContent = "Card 0 of 0";
       prevBtn.disabled = nextBtn.disabled = true;
@@ -488,52 +481,65 @@ if (document.getElementById("editFlashcardsContainer")) {
     }
 
     const card = deck[pos];
-    titleEl.textContent = card.stem || card.caseTitle;
+    titleEl.textContent = card.stem || card.caseTitle || "Study";
     frontContainer.innerHTML = `<div class="content-body">${
       card.frontHtml || '<span class="muted">[No front]</span>'
-    }${card.frontImage ? `<img src="${card.frontImage}" class="flash-image">` : ""}</div>`;
-
+    }${
+      card.frontImage ? `<img src="${card.frontImage}" class="flash-image">` : ""
+    }</div>`;
     const questionText = plainTextFromHtml(card.frontHtml) || "[No question]";
-    backContainer.innerHTML = `<div class="content-title">${escapeHtml(questionText)}</div>
-      <div class="content-body">${
-        card.backHtml || '<span class="muted">[No answer]</span>'
-      }${card.backImage ? `<img src="${card.backImage}" class="flash-image">` : ""}</div>`;
+    backContainer.innerHTML = `<div class="content-title">${escapeHtml(
+      questionText
+    )}</div><div class="content-body">${
+      card.backHtml || '<span class="muted">[No answer]</span>'
+    }${
+      card.backImage ? `<img src="${card.backImage}" class="flash-image">` : ""
+    }</div>`;
 
     flipCard.classList.remove("is-flipped", "flipped");
-
     prevBtn.disabled = pos === 0;
     nextBtn.disabled = pos === deck.length - 1;
-
     progressEl.textContent = `Card ${pos + 1} of ${deck.length}`;
+  }
+
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return "";
+    return String(str).replace(/[&<>"']/g, (s) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[s])
+    );
+  }
+
+  function openStudyModal() {
+    modal.hidden = false;
+    renderCard();
   }
 
   startBtn?.addEventListener("click", (e) => {
     e?.preventDefault();
-    buildDeck();
-    if (!deck.length) {
+    const allCases = getCases().filter(c => c.flashcards && c.flashcards.length);
+    if (!allCases.length) {
       alert("No cases with flashcards found to study.");
       return;
     }
-    modal.hidden = false;
-    renderCard();
+    buildDeck(allCases);
+    openStudyModal();
   });
 
-  flipCard.addEventListener("click", () => {
-    const flipInner = flipCard.querySelector(".flip-card-inner");
-    flipInner?.classList.toggle("is-flipped");
-  });
-
-  nextBtn.addEventListener("click", () => {
-    if (pos < deck.length - 1) pos++;
-    renderCard();
-  });
-
-  prevBtn.addEventListener("click", () => {
-    if (pos > 0) pos--;
-    renderCard();
-  });
-
+  flipCard.addEventListener("click", () => flipCard.classList.toggle("is-flipped"));
+  prevBtn.addEventListener("click", () => { if (pos > 0) { pos--; renderCard(); } });
+  nextBtn.addEventListener("click", () => { if (pos < deck.length - 1) { pos++; renderCard(); } });
   closeBtn.addEventListener("click", () => (modal.hidden = true));
+
+  // Expose a function for single case study
+  window.studySingleCase = function(caseIndex) {
+    const c = getCases()[caseIndex];
+    if (!c || !c.flashcards || !c.flashcards.length) {
+      alert("No flashcards for this case.");
+      return;
+    }
+    buildDeck([c]);
+    openStudyModal();
+  };
 })();
 
 // ---------------------------
