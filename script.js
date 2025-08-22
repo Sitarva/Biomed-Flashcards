@@ -1,5 +1,5 @@
 // ---------------------------
-// Supabase Integration (CDN-friendly)
+// Supabase Integration
 // ---------------------------
 const SUPABASE_URL = "https://ucqoiltqcblrwkltglos.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVjcW9pbHRxY2JscndrbHRnbG9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3Nzc1NTUsImV4cCI6MjA3MTM1MzU1NX0.d9nusguupaLupLRa1Yn7pBAgzJ9d2eU4Sx-SrgRAFcI";
@@ -7,6 +7,28 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // Create a Supabase client using the global `supabase` from the CDN
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const IMAGES_BUCKET = "flashcards-images";
+
+// ---------------------------
+// Supabase Storage Helper
+// ---------------------------
+async function uploadToSupabase(file) {
+  if (!file) return null;
+
+  const fileExt = file.name.split(".").pop();
+  const fileName = `flashcard-${Date.now()}.${fileExt}`;
+  
+  const { data, error } = await supabaseClient.storage
+    .from(IMAGES_BUCKET)
+    .upload(fileName, file, { cacheControl: '3600', upsert: true });
+
+  if (error) {
+    console.error("Supabase upload error:", error);
+    return null;
+  }
+
+  // Return public URL
+  return supabaseClient.storage.from(IMAGES_BUCKET).getPublicUrl(fileName).data.publicUrl;
+}
 
 // ---------------------------
 // Utilities & State
@@ -302,31 +324,31 @@ function openCaseForEdit(index) {
   openModal("editCaseModal");
 }
 
-async function saveEditedCase() {
-  if (currentEditIndex === null) return;
-  const cases = getCases();
-  const title = document.getElementById("editCaseTitle").value.trim();
-  if (!title) return alert("Please enter a title.");
+async function saveCase() {
+  const title = document.getElementById("caseTitle").value.trim();
+  if (!title) return alert("Please enter a case title.");
 
   const stems = Array.from(
-    document.querySelectorAll("#editStemsContainer .stem-input")
+    document.querySelectorAll("#stemsContainer .stem-input")
   )
     .map((i) => i.value.trim())
     .filter(Boolean);
 
   const flashcards = [];
-  for (const fc of document.querySelectorAll("#editFlashcardsContainer .flashcard")) {
+  for (const fc of document.querySelectorAll("#flashcardsContainer .flashcard")) {
     const id = fc.dataset.cardId;
-    const ed = editEditors.get(id);
+    const ed = addEditors.get(id);
     const [frontFileInput, backFileInput] = fc.querySelectorAll(".image-upload");
 
     let frontImage = null;
     let backImage = null;
+
+    // ✅ Supabase upload instead of Base64
     if (frontFileInput && frontFileInput.files[0]) {
-      frontImage = await fileToBase64(frontFileInput.files[0]);
+      frontImage = await uploadToSupabase(frontFileInput.files[0]);
     }
     if (backFileInput && backFileInput.files[0]) {
-      backImage = await fileToBase64(backFileInput.files[0]);
+      backImage = await uploadToSupabase(backFileInput.files[0]);
     }
 
     flashcards.push({
@@ -337,10 +359,12 @@ async function saveEditedCase() {
     });
   }
 
-  cases[currentEditIndex] = { title, stems, flashcards };
+  const cases = getCases();
+  cases.push({ title, stems, flashcards });
   setCases(cases);
-  rebuildHomeGrid();
-  closeModal("editCaseModal");
+  addCaseCardToDOM(title, cases.length - 1);
+  noResults.hidden = true;
+  closeModal("addCaseModal");
 }
 
 // ---------------------------
