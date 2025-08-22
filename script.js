@@ -442,6 +442,93 @@ window.openCaseForEdit = async function(caseId) {
   openModal("editCaseModal");
 };
 
+// ---- Updated addFlashcard for Edit Case ----
+function addFlashcard(containerId, mapRef, fcData = {}) {
+  const container = document.getElementById(containerId);
+  const visibleIndex = container.querySelectorAll(".flashcard").length + 1;
+  const id = uid();
+
+  const card = document.createElement("div");
+  card.className = "flashcard";
+  card.dataset.cardId = id;
+
+  card.innerHTML = `
+    <div class="flashcard-header">
+      <div class="flashcard-header-title">
+        <span class="chev">▾</span><span class="fc-title">Flashcard ${visibleIndex}</span>
+      </div>
+      <button type="button" class="icon-btn" title="Remove flashcard">✕</button>
+    </div>
+    <div class="flashcard-body">
+      <div class="flash-side">
+        <div class="label-inline">Front:</div>
+        <div id="${id}-front" class="quill-editor"></div>
+        <input type="file" accept="image/*" class="image-upload" onchange="previewImage(this)"/>
+      </div>
+      <div class="flash-side">
+        <div class="label-inline">Back:</div>
+        <div id="${id}-back" class="quill-editor"></div>
+        <input type="file" accept="image/*" class="image-upload" onchange="previewImage(this)"/>
+      </div>
+    </div>
+  `;
+
+  const removeBtn = card.querySelector(".flashcard-header .icon-btn");
+  const header = card.querySelector(".flashcard-header");
+  removeBtn.onclick = (e) => {
+    e.stopPropagation();
+    removeFlashcard(card, container, mapRef);
+  };
+  header.onclick = (e) => {
+    if (e.target === removeBtn) return;
+    card.classList.toggle("collapsed");
+    card.querySelector(".chev").textContent = card.classList.contains("collapsed")
+      ? "▸"
+      : "▾";
+  };
+
+  container.appendChild(card);
+
+  // Initialize Quill editors
+  const front = new Quill(`#${id}-front`, { theme: "snow" });
+  const back = new Quill(`#${id}-back`, { theme: "snow" });
+
+  // Set existing content if editing
+  if (fcData.front) front.root.innerHTML = fcData.front;
+  if (fcData.back) back.root.innerHTML = fcData.back;
+
+  // Insert existing images if present
+  if (fcData.frontImage) insertPreviewImage(card.querySelectorAll(".flash-side")[0], fcData.frontImage);
+  if (fcData.backImage) insertPreviewImage(card.querySelectorAll(".flash-side")[1], fcData.backImage);
+
+  mapRef.set(id, { front, back });
+}
+
+// Insert image preview
+function insertPreviewImage(container, src) {
+  let img = container.querySelector("img.preview-image");
+  if (!img) {
+    img = document.createElement("img");
+    img.className = "preview-image";
+    img.style.width = "150px";
+    img.style.height = "auto";
+    img.style.marginTop = "5px";
+    container.appendChild(img);
+  }
+  img.src = src;
+  img.alt = "Existing image";
+}
+
+// Remove flashcard
+function removeFlashcard(card, container, mapRef) {
+  const id = card.dataset.cardId;
+  mapRef.delete(id);
+  card.remove();
+  Array.from(container.querySelectorAll(".flashcard .fc-title")).forEach(
+    (el, i) => (el.textContent = `Flashcard ${i + 1}`)
+  );
+}
+
 async function saveEditedCase() {
   if (!currentEditCaseId) return;
 
