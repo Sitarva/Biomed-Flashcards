@@ -585,39 +585,32 @@ function removeFlashcard(card, container, mapRef) {
 }
 
 // ---------------------------
-// Remove case
+// Remove Case
 // ---------------------------
-
-let removeCasesCache = []; // cache Supabase cases for Remove Case modal
-
 document.getElementById("removeCaseBtn").addEventListener("click", async () => {
   document.getElementById("removeSearchInput").value = "";
-  removeCasesCache = []; // clear cache to fetch fresh data
-  await renderRemoveGrid("");
+  await renderRemoveGrid(""); // fetch fresh cases
   openModal("removeCaseModal");
 });
 
-document
-  .getElementById("removeSearchInput")
-  .addEventListener("input", async function () {
-    await renderRemoveGrid(this.value.trim());
-  });
+document.getElementById("removeSearchInput").addEventListener("input", async function () {
+  await renderRemoveGrid(this.value.trim());
+});
 
 async function renderRemoveGrid(query) {
   const grid = document.getElementById("removeCaseGrid");
   const empty = document.getElementById("removeNoCases");
   const removeBtn = document.getElementById("removeSelectedBtn");
+
   removeBtn.disabled = true;
-  grid.innerHTML = "";
+  grid.innerHTML = ""; // clear old DOM
 
-  // Fetch cases from Supabase only once per modal open
-  if (!removeCasesCache.length) {
-    removeCasesCache = await getCasesFromSupabase();
-  }
+  // Fetch fresh cases from Supabase
+  const cases = await getCasesFromSupabase();
+  removeCasesCache = cases; // optional: keep a local copy if needed
 
-  const items = removeCasesCache
-    .map((c) => ({ title: c.title, id: c.id }))
-    .filter((x) => x.title.toLowerCase().includes(query.toLowerCase()));
+  const items = cases
+    .filter(c => c.title.toLowerCase().includes(query.toLowerCase()));
 
   if (items.length === 0) {
     empty.hidden = false;
@@ -625,18 +618,15 @@ async function renderRemoveGrid(query) {
   }
   empty.hidden = true;
 
-  items.forEach((item) => {
+  items.forEach(c => {
     const card = document.createElement("div");
     card.className = "select-card";
-    card.textContent = item.title;
-    card.dataset.id = item.id;
-
+    card.textContent = c.title;
+    card.dataset.id = c.id; // use Supabase case ID
     card.onclick = () => {
       card.classList.toggle("selected");
-      removeBtn.disabled =
-        grid.querySelectorAll(".select-card.selected").length === 0;
+      removeBtn.disabled = grid.querySelectorAll(".select-card.selected").length === 0;
     };
-
     grid.appendChild(card);
   });
 }
@@ -648,15 +638,15 @@ document.getElementById("removeSelectedBtn").addEventListener("click", async () 
 
   if (!confirm(`Remove ${selected.length} case(s)?`)) return;
 
+  // Delete each selected case in Supabase
   for (const card of selected) {
     const caseId = card.dataset.id;
     await deleteCaseFromSupabase(caseId);
   }
 
-  // Refresh cache and grid
-  removeCasesCache = [];
+  // Re-render grid and home grid
   await renderRemoveGrid(document.getElementById("removeSearchInput").value.trim());
-  rebuildHomeGrid();
+  await rebuildHomeGrid();
 });
 
 // ---------------------------
