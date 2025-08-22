@@ -9,50 +9,6 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const IMAGES_BUCKET = "flashcards-images";
 
 // ---------------------------
-// Helper: Upload a file to Supabase Storage
-// ---------------------------
-async function uploadFileToSupabase(file) {
-  if (!file) return null;
-
-  const fileExt = file.name.split(".").pop();
-  const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
-
-  const { data, error } = await supabaseClient.storage
-    .from(IMAGES_BUCKET)
-    .upload(fileName, file);
-
-  if (error) {
-    console.error("Supabase upload error:", error);
-    return null;
-  }
-
-  const { publicUrl, error: urlError } = supabaseClient.storage
-    .from(IMAGES_BUCKET)
-    .getPublicUrl(fileName);
-
-  if (urlError) {
-    console.error("Supabase public URL error:", urlError);
-    return null;
-  }
-
-  return publicUrl;
-}
-
-// ---------------------------
-// Test upload button
-// ---------------------------
-document.getElementById("testUploadBtn")?.addEventListener("click", async () => {
-  const fileInput = document.querySelector(".image-upload");
-  if (!fileInput?.files?.[0]) return alert("Select a file in a flashcard first!");
-  
-  const url = await uploadFileToSupabase(fileInput.files[0]);
-  if (url) {
-    console.log("✅ Supabase upload successful! URL:", url);
-    alert(`Test upload done! Check console for URL: ${url}`);
-  }
-});
-
-// ---------------------------
 // Utilities & State
 // ---------------------------
 const casesContainer = document.getElementById("casesContainer");
