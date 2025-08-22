@@ -56,9 +56,9 @@ async function saveCaseToSupabase(caseObj) {
     .insert([{ 
       title: caseObj.title,
       stems: caseObj.stems,
-      flashcards: caseObj.flashcards
-      .select(); 
-    }]);
+      flashcards: caseObj.flashcards 
+    }])
+    .select(); 
 
   if (error) {
     console.error("Error saving case:", error);
