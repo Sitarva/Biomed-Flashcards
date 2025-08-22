@@ -260,47 +260,6 @@ function removeFlashcard(card, container, mapRef) {
   );
 }
 
-async function previewImage(input) {
-  if (!input.files || !input.files[0]) return;
-  const file = input.files[0];
-
-  // Check if there’s already an <img> next to this input
-  let img = input.parentNode.querySelector("img.preview-image");
-  if (!img) {
-    img = document.createElement("img");
-    img.className = "preview-image"; // consistent class to identify
-    img.style.width = "150px";
-    img.style.height = "auto";
-    img.style.marginTop = "5px";
-    input.parentNode.appendChild(img);
-  }
-
-  // Temporarily indicate uploading
-  img.src = "";
-  img.alt = "Uploading...";
-
-  try {
-    const publicUrl = await uploadToSupabase(file);
-    if (publicUrl) {
-      img.src = publicUrl;
-      img.alt = file.name;
-
-      // If editing, also update the flashcard object
-      const cardDiv = input.closest(".flashcard");
-      if (cardDiv) {
-        const id = cardDiv.dataset.cardId;
-        const editorMap = editEditors.get(id);
-        // nothing to do in Quill, the preview is separate
-      }
-    } else {
-      img.alt = "Upload failed";
-    }
-  } catch (err) {
-    console.error("Image upload failed:", err);
-    img.alt = "Upload failed";
-  }
-}
-
 // ---------------------------
 // Add case
 // ---------------------------
