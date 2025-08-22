@@ -409,79 +409,31 @@ function renderEditCaseList(query = "") {
   });
 }
 
-async function openCaseForEdit(caseId) {
-  closeModal("editCasePreModal");
-  editEditors = new Map();
-  currentEditCaseId = caseId;
+window.openCaseStudy = (c) => {
+  const parsedFlashcards = Array.isArray(c.flashcards)
+    ? c.flashcards
+    : JSON.parse(c.flashcards || "[]");
 
-  const c = homeCases.find((x) => x.id === caseId);
-  if (!c) return alert("Case not found.");
+  if (!parsedFlashcards.length) return alert("No flashcards for this case.");
 
-  document.getElementById("editCaseTitle").value = c.title;
+  const parsedStems = Array.isArray(c.stems)
+    ? c.stems
+    : JSON.parse(c.stems || "[]");
 
-  const stemsWrap = document.getElementById("editStemsContainer");
-  const fcsWrap = document.getElementById("editFlashcardsContainer");
-  stemsWrap.innerHTML = "<h3>Stems</h3>";
-  fcsWrap.innerHTML = "<h3>Flashcards</h3>";
+  const stem = parsedStems.length
+    ? parsedStems[Math.floor(Math.random() * parsedStems.length)]
+    : "";
 
-  // Add stems
-  c.stems.forEach((s) => {
-    addStem("editStemsContainer");
-    const last = stemsWrap.querySelectorAll(".stem-input");
-    last[last.length - 1].value = s;
-  });
+  const caseDeck = parsedFlashcards.map(fc => ({
+    stem,
+    frontHtml: fc.front || "",
+    backHtml: fc.back || "",
+    frontImage: fc.frontImage || null,
+    backImage: fc.backImage || null
+  }));
 
-  // Add flashcards
-  c.flashcards.forEach((fc) => {
-    addFlashcard("editFlashcardsContainer", editEditors, fc);
-  });
-
-  openModal("editCaseModal");
-}
-
-async function saveEditedCase() {
-  if (!currentEditCaseId) return;
-
-  const title = document.getElementById("editCaseTitle").value.trim();
-  if (!title) return alert("Please enter a title.");
-
-  const stems = Array.from(
-    document.querySelectorAll("#editStemsContainer .stem-input")
-  )
-    .map((i) => i.value.trim())
-    .filter(Boolean);
-
-  const flashcards = [];
-
-  for (const fc of document.querySelectorAll("#editFlashcardsContainer .flashcard")) {
-    const id = fc.dataset.cardId;
-    const ed = editEditors.get(id);
-    const [frontFileInput, backFileInput] = fc.querySelectorAll(".image-upload");
-    let frontImage = fc.querySelector(".flash-side img")?.src || null;
-    let backImage = fc.querySelector(".flash-side img")?.src || null;
-
-    if (frontFileInput && frontFileInput.files[0]) {
-      frontImage = await uploadToSupabase(frontFileInput.files[0]);
-    }
-    if (backFileInput && backFileInput.files[0]) {
-      backImage = await uploadToSupabase(backFileInput.files[0]);
-    }
-
-    flashcards.push({
-      front: ed ? ed.front.root.innerHTML : "",
-      back: ed ? ed.back.root.innerHTML : "",
-      frontImage,
-      backImage,
-    });
-  }
-
-  const caseObj = { title, stems, flashcards };
-  await updateCaseInSupabase(currentEditCaseId, caseObj);
-
-  // Refresh home grid without prompt
-  rebuildHomeGrid();
-  closeModal("editCaseModal");
-}
+  studyDeck(caseDeck);
+};
 
 // ---------------------------
 // Add stem for Edit
