@@ -493,33 +493,30 @@ async function saveEditedCase() {
   const title = document.getElementById("editCaseTitle").value.trim();
   if (!title) return alert("Please enter a title.");
 
+  // Get stems
   const stems = Array.from(
     document.querySelectorAll("#editStemsContainer .stem-input")
   )
     .map((i) => i.value.trim())
     .filter(Boolean);
 
+  // Get flashcards
   const flashcards = [];
   for (const fc of document.querySelectorAll("#editFlashcardsContainer .flashcard")) {
     const id = fc.dataset.cardId;
     const ed = editEditors.get(id);
-    const [frontFileInput, backFileInput] = fc.querySelectorAll(".image-upload");
-
-    let frontImage = fc.querySelector(".flash-side img")?.src || null;
-    let backImage = fc.querySelector(".flash-side img")?.src || null;
-
-    if (frontFileInput?.files[0]) frontImage = await uploadToSupabase(frontFileInput.files[0]);
-    if (backFileInput?.files[0]) backImage = await uploadToSupabase(backFileInput.files[0]);
 
     flashcards.push({
       front: ed ? ed.front.root.innerHTML : "",
       back: ed ? ed.back.root.innerHTML : "",
-      frontImage,
-      backImage,
+      frontImage: null, // no separate images
+      backImage: null,
     });
   }
 
   const caseObj = { title, stems, flashcards };
+
+  // Save to Supabase
   await updateCaseInSupabase(currentEditCaseId, caseObj);
 
   // Refresh home grid
