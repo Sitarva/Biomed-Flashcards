@@ -375,7 +375,7 @@ async function saveCase() {
 // ---------------------------
 
 let currentEditCaseId = null;
-let editEditors = new Map();
+editEditors = new Map();
 
 document.getElementById("editCaseBtn").addEventListener("click", async () => {
   document.getElementById("editSearchInput").value = "";
