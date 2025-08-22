@@ -286,74 +286,145 @@ function previewImage(input) {
 }
 
 // ---------------------------
-// Global
+// Add case
 // ---------------------------
-let addEditors = new Map();
-let editEditors = new Map();
-let homeCases = [];
+document.getElementById("addCaseBtn").addEventListener("click", () => {
+  addEditors = new Map();
+  document.getElementById("caseTitle").value = "";
+  document.getElementById("stemsContainer").innerHTML = "<h3>Stems</h3>";
+  document.getElementById("flashcardsContainer").innerHTML = "<h3>Flashcards</h3>";
+  openModal("addCaseModal");
+});
+
+document.getElementById("saveCaseBtn").addEventListener("click", saveCase);
+
+async function saveCase() {
+  const title = document.getElementById("caseTitle").value.trim();
+  if (!title) return alert("Please enter a case title.");
+
+  // Build stems array
+  const stems = Array.from(document.querySelectorAll("#stemsContainer .stem-input"))
+    .map((i) => i.value.trim())
+    .filter(Boolean);
+
+  // Build flashcards array
+  const flashcards = [];
+  for (const fc of document.querySelectorAll("#flashcardsContainer .flashcard")) {
+    const id = fc.dataset.cardId;
+    const ed = addEditors.get(id);
+    const [frontFileInput, backFileInput] = fc.querySelectorAll(".image-upload");
+
+    let frontImage = null;
+    let backImage = null;
+
+    if (frontFileInput && frontFileInput.files[0]) {
+      frontImage = await uploadToSupabase(frontFileInput.files[0]);
+    }
+    if (backFileInput && backFileInput.files[0]) {
+      backImage = await uploadToSupabase(backFileInput.files[0]);
+    }
+
+    flashcards.push({
+      front: ed ? ed.front.root.innerHTML : "",
+      back: ed ? ed.back.root.innerHTML : "",
+      frontImage,
+      backImage,
+    });
+  }
+
+  const caseObj = { title, stems, flashcards };
+  console.log("DEBUG: Case object to save:", caseObj);
+
+  try {
+    const savedCase = await saveCaseToSupabase(caseObj);
+    console.log("DEBUG: Saved case returned from Supabase:", savedCase);
+
+    if (savedCase) {
+      // Update the in-memory array and DOM
+      homeCases.push(savedCase);
+      addCaseCardToDOM(savedCase.title, savedCase.id);
+      noResults.hidden = true;
+      closeModal("addCaseModal");
+    }
+  } catch (err) {
+    console.error("DEBUG: Error in saveCase:", err);
+    alert("Failed to save case. Check console for details.");
+  }
+}
+
+// ---------------------------
+// Edit Case
+// ---------------------------
+
 let currentEditCaseId = null;
+editEditors = new Map();
 
-// ---------------------------
-// Utility: UID
-// ---------------------------
-function uid() {
-  return 'id-' + Math.random().toString(36).substr(2, 9);
-}
+document.getElementById("editCaseBtn").addEventListener("click", async () => {
+  document.getElementById("editSearchInput").value = "";
+  homeCases = await getCasesFromSupabase(); // fetch fresh cases
+  renderEditCaseList("");
+  openModal("editCasePreModal");
+});
 
-// ---------------------------
-// Image Preview Helpers
-// ---------------------------
-function previewImage(input) {
-  if (!input.files || !input.files[0]) return;
-  const file = input.files[0];
+document.getElementById("editSearchInput").addEventListener("input", function () {
+  renderEditCaseList(this.value.trim());
+});
 
-  let img = input.parentNode.querySelector("img.preview-image");
-  if (!img) {
-    img = document.createElement("img");
-    img.className = "preview-image";
-    img.style.width = "150px";
-    img.style.height = "auto";
-    img.style.marginTop = "5px";
-    input.parentNode.appendChild(img);
+function renderEditCaseList(query = "") {
+  const list = document.getElementById("editCaseList");
+  const noCasesMsg = document.getElementById("editNoCases");
+  list.innerHTML = "";
+
+  const filtered = homeCases.filter((c) =>
+    c.title.toLowerCase().includes(query.toLowerCase())
+  );
+
+  if (!filtered.length) {
+    noCasesMsg.hidden = false;
+    return;
   }
+  noCasesMsg.hidden = true;
 
-  const reader = new FileReader();
-  reader.onload = e => {
-    img.src = e.target.result;
-    img.alt = file.name;
-  };
-  reader.readAsDataURL(file);
+  filtered.forEach((c) => {
+    const card = document.createElement("div");
+    card.className = "select-card";
+    card.textContent = c.title;
+    card.addEventListener("click", () => openCaseForEdit(c.id));
+    list.appendChild(card);
+  });
 }
 
-function insertPreviewImage(container, url) {
-  let img = container.querySelector("img.preview-image");
-  if (!img) {
-    img = document.createElement("img");
-    img.className = "preview-image";
-    img.style.width = "150px";
-    img.style.height = "auto";
-    img.style.marginTop = "5px";
-    container.appendChild(img);
-  }
-  img.src = url;
-  img.alt = "Existing image";
-}
+window.openCaseForEdit = async function(caseId) {
+  closeModal("editCasePreModal");
+  editEditors = new Map();
+  currentEditCaseId = caseId;
 
-// ---------------------------
-// Add / Edit Case: Add Stem
-// ---------------------------
-function addStem(containerId) {
-  const container = document.getElementById(containerId);
-  const input = document.createElement("input");
-  input.type = "text";
-  input.className = "stem-input";
-  input.placeholder = "Enter stem...";
-  container.appendChild(input);
-}
+  const c = homeCases.find((x) => x.id === caseId);
+  if (!c) return alert("Case not found.");
 
-// ---------------------------
-// Add / Edit Case: Add Flashcard
-// ---------------------------
+  document.getElementById("editCaseTitle").value = c.title;
+
+  const stemsWrap = document.getElementById("editStemsContainer");
+  const fcsWrap = document.getElementById("editFlashcardsContainer");
+  stemsWrap.innerHTML = "<h3>Stems</h3>";
+  fcsWrap.innerHTML = "<h3>Flashcards</h3>";
+
+  // Add stems
+  (c.stems || []).forEach((s) => {
+    addStem("editStemsContainer");
+    const last = stemsWrap.querySelectorAll(".stem-input");
+    last[last.length - 1].value = s;
+  });
+
+  // Add flashcards
+  (c.flashcards || []).forEach((fc) => {
+    addFlashcard("editFlashcardsContainer", editEditors, fc);
+  });
+
+  openModal("editCaseModal");
+};
+
+// ---- Updated addFlashcard for Edit Case ----
 function addFlashcard(containerId, mapRef, fcData = {}) {
   const container = document.getElementById(containerId);
   const visibleIndex = container.querySelectorAll(".flashcard").length + 1;
@@ -404,18 +475,33 @@ function addFlashcard(containerId, mapRef, fcData = {}) {
   const front = new Quill(`#${id}-front`, { theme: "snow" });
   const back = new Quill(`#${id}-back`, { theme: "snow" });
 
+  // Set existing content if editing
   if (fcData.front) front.root.innerHTML = fcData.front;
   if (fcData.back) back.root.innerHTML = fcData.back;
 
+  // Insert existing images if present
   if (fcData.frontImage) insertPreviewImage(card.querySelectorAll(".flash-side")[0], fcData.frontImage);
   if (fcData.backImage) insertPreviewImage(card.querySelectorAll(".flash-side")[1], fcData.backImage);
 
   mapRef.set(id, { front, back });
 }
 
-// ---------------------------
-// Remove Flashcard
-// ---------------------------
+// Insert image preview
+function insertPreviewImage(container, src) {
+  let img = container.querySelector("img.preview-image");
+  if (!img) {
+    img = document.createElement("img");
+    img.className = "preview-image";
+    img.style.width = "150px";
+    img.style.height = "auto";
+    img.style.marginTop = "5px";
+    container.appendChild(img);
+  }
+  img.src = src;
+  img.alt = "Existing image";
+}
+
+// Remove flashcard
 function removeFlashcard(card, container, mapRef) {
   const id = card.dataset.cardId;
   mapRef.delete(id);
@@ -425,133 +511,16 @@ function removeFlashcard(card, container, mapRef) {
   );
 }
 
-// ---------------------------
-// Add Case
-// ---------------------------
-document.getElementById("addCaseBtn").addEventListener("click", () => {
-  addEditors = new Map();
-  document.getElementById("caseTitle").value = "";
-  document.getElementById("stemsContainer").innerHTML = "<h3>Stems</h3>";
-  document.getElementById("flashcardsContainer").innerHTML = "<h3>Flashcards</h3>";
-  openModal("addCaseModal");
-});
-
-document.getElementById("saveCaseBtn").addEventListener("click", saveCase);
-
-async function saveCase() {
-  const title = document.getElementById("caseTitle").value.trim();
-  if (!title) return alert("Please enter a case title.");
-
-  const stems = Array.from(document.querySelectorAll("#stemsContainer .stem-input"))
-    .map(i => i.value.trim())
-    .filter(Boolean);
-
-  const flashcards = [];
-  for (const fc of document.querySelectorAll("#flashcardsContainer .flashcard")) {
-    const id = fc.dataset.cardId;
-    const ed = addEditors.get(id);
-    const [frontFileInput, backFileInput] = fc.querySelectorAll(".image-upload");
-
-    const frontImage = frontFileInput?.files[0]
-      ? await uploadToSupabase(frontFileInput.files[0])
-      : fc.querySelector("img.preview-image")?.src || null;
-
-    const backImage = backFileInput?.files[0]
-      ? await uploadToSupabase(backFileInput.files[0])
-      : fc.querySelector("img.preview-image")?.src || null;
-
-    flashcards.push({
-      front: ed ? ed.front.root.innerHTML : "",
-      back: ed ? ed.back.root.innerHTML : "",
-      frontImage,
-      backImage,
-    });
-  }
-
-  const caseObj = { title, stems, flashcards };
-  const savedCase = await saveCaseToSupabase(caseObj);
-
-  if (savedCase) {
-    homeCases.push(savedCase);
-    addCaseCardToDOM(savedCase.title, savedCase.id);
-    closeModal("addCaseModal");
-  }
-}
-
-// ---------------------------
-// Edit Case
-// ---------------------------
-document.getElementById("editCaseBtn").addEventListener("click", async () => {
-  document.getElementById("editSearchInput").value = "";
-  homeCases = await getCasesFromSupabase();
-  renderEditCaseList("");
-  openModal("editCasePreModal");
-});
-
-document.getElementById("editSearchInput").addEventListener("input", function () {
-  renderEditCaseList(this.value.trim());
-});
-
-function renderEditCaseList(query = "") {
-  const list = document.getElementById("editCaseList");
-  const noCasesMsg = document.getElementById("editNoCases");
-  list.innerHTML = "";
-
-  const filtered = homeCases.filter((c) =>
-    c.title.toLowerCase().includes(query.toLowerCase())
-  );
-
-  if (!filtered.length) {
-    noCasesMsg.hidden = false;
-    return;
-  }
-  noCasesMsg.hidden = true;
-
-  filtered.forEach((c) => {
-    const card = document.createElement("div");
-    card.className = "select-card";
-    card.textContent = c.title;
-    card.addEventListener("click", () => openCaseForEdit(c.id));
-    list.appendChild(card);
-  });
-}
-
-window.openCaseForEdit = async function(caseId) {
-  closeModal("editCasePreModal");
-  editEditors = new Map();
-  currentEditCaseId = caseId;
-
-  const c = homeCases.find((x) => x.id === caseId);
-  if (!c) return alert("Case not found.");
-
-  document.getElementById("editCaseTitle").value = c.title;
-  const stemsWrap = document.getElementById("editStemsContainer");
-  const fcsWrap = document.getElementById("editFlashcardsContainer");
-  stemsWrap.innerHTML = "<h3>Stems</h3>";
-  fcsWrap.innerHTML = "<h3>Flashcards</h3>";
-
-  (c.stems || []).forEach(s => {
-    addStem("editStemsContainer");
-    const last = stemsWrap.querySelectorAll(".stem-input");
-    last[last.length - 1].value = s;
-  });
-
-  (c.flashcards || []).forEach(fc => {
-    addFlashcard("editFlashcardsContainer", editEditors, fc);
-  });
-
-  openModal("editCaseModal");
-});
-
-document.getElementById("saveEditCaseBtn").addEventListener("click", saveEditedCase);
-
 async function saveEditedCase() {
   if (!currentEditCaseId) return;
+
   const title = document.getElementById("editCaseTitle").value.trim();
   if (!title) return alert("Please enter a title.");
 
-  const stems = Array.from(document.querySelectorAll("#editStemsContainer .stem-input"))
-    .map(i => i.value.trim())
+  const stems = Array.from(
+    document.querySelectorAll("#editStemsContainer .stem-input")
+  )
+    .map((i) => i.value.trim())
     .filter(Boolean);
 
   const flashcards = [];
@@ -560,13 +529,11 @@ async function saveEditedCase() {
     const ed = editEditors.get(id);
     const [frontFileInput, backFileInput] = fc.querySelectorAll(".image-upload");
 
-    const frontImage = frontFileInput?.files[0]
-      ? await uploadToSupabase(frontFileInput.files[0])
-      : fc.querySelector("img.preview-image")?.src || null;
+    let frontImage = fc.querySelector(".flash-side img")?.src || null;
+    let backImage = fc.querySelector(".flash-side img")?.src || null;
 
-    const backImage = backFileInput?.files[0]
-      ? await uploadToSupabase(backFileInput.files[0])
-      : fc.querySelector("img.preview-image")?.src || null;
+    if (frontFileInput?.files[0]) frontImage = await uploadToSupabase(frontFileInput.files[0]);
+    if (backFileInput?.files[0]) backImage = await uploadToSupabase(backFileInput.files[0]);
 
     flashcards.push({
       front: ed ? ed.front.root.innerHTML : "",
@@ -578,6 +545,8 @@ async function saveEditedCase() {
 
   const caseObj = { title, stems, flashcards };
   await updateCaseInSupabase(currentEditCaseId, caseObj);
+
+  // Refresh home grid
   await rebuildHomeGrid();
   closeModal("editCaseModal");
 }
