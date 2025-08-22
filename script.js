@@ -191,17 +191,33 @@ function removeFlashcard(card, container, mapRef) {
   );
 }
 
-function previewImage(input) {
+async function previewImage(input) {
   if (input.files && input.files[0]) {
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      const img = document.createElement("img");
-      img.src = e.target.result;
-      img.style.width = "1500px"; // or whatever you prefer
+    const file = input.files[0];
+
+    // Show a temporary "Uploading..." placeholder
+    let img = input.parentNode.querySelector("img");
+    if (!img) {
+      img = document.createElement("img");
+      img.style.width = "1500px"; // adjust as needed
       img.style.height = "auto";
       input.parentNode.appendChild(img);
-    };
-    reader.readAsDataURL(input.files[0]);
+    }
+    img.src = ""; 
+    img.alt = "Uploading...";
+
+    try {
+      const publicUrl = await uploadToSupabase(file);
+      if (publicUrl) {
+        img.src = publicUrl;
+        img.alt = file.name;
+      } else {
+        img.alt = "Upload failed";
+      }
+    } catch (err) {
+      console.error("Image upload failed:", err);
+      img.alt = "Upload failed";
+    }
   }
 }
 
