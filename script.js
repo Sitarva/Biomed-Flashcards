@@ -165,9 +165,8 @@ function previewImage(input) {
     reader.onload = function (e) {
       const img = document.createElement("img");
       img.src = e.target.result;
-      img.style.maxWidth = "100%";
-      img.style.display = "block";
-      img.style.marginTop = "6px";
+      img.style.width = "300px"; // or whatever you prefer
+      img.style.height = "auto";
       input.parentNode.appendChild(img);
     };
     reader.readAsDataURL(input.files[0]);
