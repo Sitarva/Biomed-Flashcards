@@ -262,9 +262,6 @@ function removeFlashcard(card, container, mapRef) {
   );
 }
 
-When i use attach file he preview spits this out if I open the preview in a new tab. {"statusCode":"404","error":"Bucket not found","message":"Bucket not found"}
-
-Here is the relevant code.
 async function previewImage(input) {
   if (!input.files || !input.files[0]) return;
   const file = input.files[0];
