@@ -326,7 +326,48 @@ function openCaseForEdit(index) {
   openModal("editCaseModal");
 }
 
+async function saveEditedCase() {
+  if (currentEditIndex === null) return;
+  const cases = getCases();
+  const title = document.getElementById("editCaseTitle").value.trim();
+  if (!title) return alert("Please enter a title.");
 
+  const stems = Array.from(
+    document.querySelectorAll("#editStemsContainer .stem-input")
+  )
+    .map((i) => i.value.trim())
+    .filter(Boolean);
+
+  const flashcards = [];
+  for (const fc of document.querySelectorAll("#editFlashcardsContainer .flashcard")) {
+    const id = fc.dataset.cardId;
+    const ed = editEditors.get(id);
+    const [frontFileInput, backFileInput] = fc.querySelectorAll(".image-upload");
+
+    let frontImage = null;
+    let backImage = null;
+
+    // ✅ Supabase upload instead of Base64
+    if (frontFileInput && frontFileInput.files[0]) {
+      frontImage = await uploadToSupabase(frontFileInput.files[0]);
+    }
+    if (backFileInput && backFileInput.files[0]) {
+      backImage = await uploadToSupabase(backFileInput.files[0]);
+    }
+
+    flashcards.push({
+      front: ed ? ed.front.root.innerHTML : "",
+      back: ed ? ed.back.root.innerHTML : "",
+      frontImage,
+      backImage
+    });
+  }
+
+  cases[currentEditIndex] = { title, stems, flashcards };
+  setCases(cases);
+  rebuildHomeGrid();
+  closeModal("editCaseModal");
+}
 
 // ---------------------------
 // Remove case
