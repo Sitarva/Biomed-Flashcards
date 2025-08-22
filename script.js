@@ -106,7 +106,6 @@ async function deleteCaseFromSupabase(caseId) {
 let addEditors = new Map();
 let editEditors = new Map();
 let currentEditCaseId = null;
-let homeCases = [];
 
 const uid = () => "id-" + Math.random().toString(36).slice(2) + Date.now();
 
