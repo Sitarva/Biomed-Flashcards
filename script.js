@@ -755,7 +755,7 @@ if (document.getElementById("editFlashcardsContainer")) {
 
   startBtn?.addEventListener("click", (e) => {
     e.preventDefault();
-    const cases = getCases();
+    const cases = getCasesFromSupabase();
     if (!cases.length) return alert("No flashcards found.");
 
     shuffleArray(cases);
@@ -776,7 +776,7 @@ if (document.getElementById("editFlashcardsContainer")) {
   });
 
   window.openCaseStudy = (index) => {
-    const cases = getCases();
+    const cases = getCasesFromSupabase();
     const c = cases[index];
     if (!c?.flashcards?.length) return alert("No flashcards for this case.");
 
