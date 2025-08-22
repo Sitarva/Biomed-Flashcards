@@ -587,48 +587,20 @@ function removeFlashcard(card, container, mapRef) {
 // ---------------------------
 // Remove Case
 // ---------------------------
+
+// Open Remove Case Modal
 document.getElementById("removeCaseBtn").addEventListener("click", async () => {
   document.getElementById("removeSearchInput").value = "";
-  await renderRemoveGrid("");
+  await renderRemoveGrid(""); // fetch fresh cases
   openModal("removeCaseModal");
 });
 
-document.getElementById("removeSearchInput").addEventListener("input", async function () {
-  await renderRemoveGrid(this.value.trim());
+// Cancel button
+document.getElementById("cancelRemoveCaseBtn").addEventListener("click", () => {
+  closeModal("removeCaseModal");
 });
 
-async function renderRemoveGrid(query) {
-  const grid = document.getElementById("removeCaseGrid");
-  const empty = document.getElementById("removeNoCases");
-  const removeBtn = document.getElementById("removeSelectedBtn");
-
-  removeBtn.disabled = true;
-  grid.innerHTML = ""; // clear old DOM
-
-  // Fetch fresh cases from Supabase
-  const cases = await getCasesFromSupabase();
-
-  const items = cases.filter(c => c.title.toLowerCase().includes(query.toLowerCase()));
-
-  if (items.length === 0) {
-    empty.hidden = false;
-    return;
-  }
-  empty.hidden = true;
-
-  items.forEach(c => {
-    const card = document.createElement("div");
-    card.className = "select-card";
-    card.textContent = c.title;
-    card.dataset.id = c.id; // use Supabase case ID
-    card.onclick = () => {
-      card.classList.toggle("selected");
-      removeBtn.disabled = grid.querySelectorAll(".select-card.selected").length === 0;
-    };
-    grid.appendChild(card);
-  });
-}
-
+// Remove selected cases
 document.getElementById("removeSelectedBtn").addEventListener("click", async () => {
   const grid = document.getElementById("removeCaseGrid");
   const selected = Array.from(grid.querySelectorAll(".select-card.selected"));
@@ -642,11 +614,52 @@ document.getElementById("removeSelectedBtn").addEventListener("click", async () 
     await deleteCaseFromSupabase(caseId);
   }
 
-  // Re-render grid and home grid
+  // Refresh grid and home cases
   await renderRemoveGrid(document.getElementById("removeSearchInput").value.trim());
   await rebuildHomeGrid();
-  closeModal("removeCaseModal");
 });
+
+// Search input listener
+document.getElementById("removeSearchInput").addEventListener("input", async function () {
+  await renderRemoveGrid(this.value.trim());
+});
+
+// ---------------------------
+// Render Remove Grid
+// ---------------------------
+async function renderRemoveGrid(query = "") {
+  const grid = document.getElementById("removeCaseGrid");
+  const empty = document.getElementById("removeNoCases");
+  const removeBtn = document.getElementById("removeSelectedBtn");
+
+  removeBtn.disabled = true;
+  grid.innerHTML = ""; // clear old DOM
+
+  // Fetch fresh cases from Supabase
+  const cases = await getCasesFromSupabase();
+
+  // Filter by search query
+  const items = cases.filter(c => c.title.toLowerCase().includes(query.toLowerCase()));
+
+  if (items.length === 0) {
+    empty.hidden = false;
+    return;
+  }
+  empty.hidden = true;
+
+  // Populate grid
+  items.forEach(c => {
+    const card = document.createElement("div");
+    card.className = "select-card";
+    card.textContent = c.title;
+    card.dataset.id = c.id; // use Supabase ID
+    card.onclick = () => {
+      card.classList.toggle("selected");
+      removeBtn.disabled = grid.querySelectorAll(".select-card.selected").length === 0;
+    };
+    grid.appendChild(card);
+  });
+}
 
 // ---------------------------
 // Init
@@ -800,68 +813,72 @@ if (document.getElementById("editFlashcardsContainer")) {
 // ---------------------------
 // Modal Button Listeners
 // ---------------------------
-// Add Case Modal
+
+// -------- Add Case --------
 document.getElementById("addCaseBtn").addEventListener("click", () => {
   addEditors = new Map();
   document.getElementById("caseTitle").value = "";
   document.getElementById("stemsContainer").innerHTML = "<h3>Stems</h3>";
-  document.getElementById("flashcardsContainer").innerHTML =
-    "<h3>Flashcards</h3>";
+  document.getElementById("flashcardsContainer").innerHTML = "<h3>Flashcards</h3>";
   openModal("addCaseModal");
 });
-document
-  .getElementById("cancelAddCaseBtn")
-  .addEventListener("click", () => closeModal("addCaseModal"));
-document
-  .getElementById("addStemBtn")
-  .addEventListener("click", () => addStem("stemsContainer"));
-document
-  .getElementById("addFlashcardBtn")
-  .addEventListener("click", () =>
-    addFlashcard("flashcardsContainer", addEditors)
-  );
+
+document.getElementById("cancelAddCaseBtn").addEventListener("click", () => closeModal("addCaseModal"));
+
+document.getElementById("addStemBtn").addEventListener("click", () => addStem("stemsContainer"));
+
+document.getElementById("addFlashcardBtn").addEventListener("click", () =>
+  addFlashcard("flashcardsContainer", addEditors)
+);
+
 document.getElementById("saveCaseBtn").addEventListener("click", saveCase);
 
-// Edit Case Pre-screen
+
+// -------- Edit Case Pre-screen --------
 document.getElementById("editCaseBtn").addEventListener("click", () => {
   document.getElementById("editSearchInput").value = "";
   renderEditCaseList("");
   openModal("editCasePreModal");
 });
-document
-  .getElementById("cancelEditPreBtn")
-  .addEventListener("click", () => closeModal("editCasePreModal"));
 
-// Edit Case Modal
-document
-  .getElementById("editAddStemBtn")
-  .addEventListener("click", () => addStem("editStemsContainer"));
-document
-  .getElementById("editAddFlashcardBtn")
-  .addEventListener("click", () =>
-    addFlashcard("editFlashcardsContainer", editEditors)
-  );
-document
-  .getElementById("saveEditedCaseBtn")
-  .addEventListener("click", saveEditedCase);
-document
-  .getElementById("cancelEditCaseBtn")
-  .addEventListener("click", () => closeModal("editCaseModal"));
+document.getElementById("cancelEditPreBtn").addEventListener("click", () => closeModal("editCasePreModal"));
 
-// Remove Case Modal
-document
-  .getElementById("removeSelectedBtn")
-  .addEventListener("click", async () => {
-    const grid = document.getElementById("removeCaseGrid");
-    const selected = Array.from(grid.querySelectorAll(".select-card.selected"));
-    if (selected.length === 0) return;
-    if (!confirm(`Remove ${selected.length} case(s)?`)) return;
+// -------- Edit Case Modal --------
+document.getElementById("editAddStemBtn").addEventListener("click", () => addStem("editStemsContainer"));
 
-    for (const card of selected) {
-      const caseId = card.dataset.id; // Supabase ID
-      await deleteCaseFromSupabase(caseId);
-    }
+document.getElementById("editAddFlashcardBtn").addEventListener("click", () =>
+  addFlashcard("editFlashcardsContainer", editEditors)
+);
 
-    await renderRemoveGrid(document.getElementById("removeSearchInput").value.trim());
-    await rebuildHomeGrid();
-  });
+document.getElementById("saveEditedCaseBtn").addEventListener("click", saveEditedCase);
+
+document.getElementById("cancelEditCaseBtn").addEventListener("click", () => closeModal("editCaseModal"));
+
+
+// -------- Remove Case --------
+document.getElementById("removeCaseBtn").addEventListener("click", async () => {
+  document.getElementById("removeSearchInput").value = "";
+  await renderRemoveGrid(""); // fetch fresh cases
+  openModal("removeCaseModal");
+});
+
+document.getElementById("cancelRemoveCaseBtn").addEventListener("click", () => closeModal("removeCaseModal"));
+
+document.getElementById("removeSelectedBtn").addEventListener("click", async () => {
+  const grid = document.getElementById("removeCaseGrid");
+  const selected = Array.from(grid.querySelectorAll(".select-card.selected"));
+  if (selected.length === 0) return;
+  if (!confirm(`Remove ${selected.length} case(s)?`)) return;
+
+  for (const card of selected) {
+    const caseId = card.dataset.id; // Supabase ID
+    await deleteCaseFromSupabase(caseId);
+  }
+
+  await renderRemoveGrid(document.getElementById("removeSearchInput").value.trim());
+  await rebuildHomeGrid();
+});
+
+document.getElementById("removeSearchInput").addEventListener("input", async function () {
+  await renderRemoveGrid(this.value.trim());
+});
