@@ -589,7 +589,7 @@ function removeFlashcard(card, container, mapRef) {
 // ---------------------------
 document.getElementById("removeCaseBtn").addEventListener("click", async () => {
   document.getElementById("removeSearchInput").value = "";
-  await renderRemoveGrid(""); // fetch fresh cases from Supabase
+  await renderRemoveGrid("");
   openModal("removeCaseModal");
 });
 
@@ -597,31 +597,30 @@ document.getElementById("removeSearchInput").addEventListener("input", async fun
   await renderRemoveGrid(this.value.trim());
 });
 
-async function renderRemoveGrid(query = "") {
+async function renderRemoveGrid(query) {
   const grid = document.getElementById("removeCaseGrid");
   const empty = document.getElementById("removeNoCases");
   const removeBtn = document.getElementById("removeSelectedBtn");
 
   removeBtn.disabled = true;
-  grid.innerHTML = ""; // clear previous cards
+  grid.innerHTML = ""; // clear old DOM
 
   // Fetch fresh cases from Supabase
   const cases = await getCasesFromSupabase();
-  homeCases = cases; // update global state
 
-  const filtered = cases.filter(c => c.title.toLowerCase().includes(query.toLowerCase()));
+  const items = cases.filter(c => c.title.toLowerCase().includes(query.toLowerCase()));
 
-  if (!filtered.length) {
+  if (items.length === 0) {
     empty.hidden = false;
     return;
   }
   empty.hidden = true;
 
-  filtered.forEach(c => {
+  items.forEach(c => {
     const card = document.createElement("div");
     card.className = "select-card";
     card.textContent = c.title;
-    card.dataset.id = c.id; // Supabase case ID
+    card.dataset.id = c.id; // use Supabase case ID
     card.onclick = () => {
       card.classList.toggle("selected");
       removeBtn.disabled = grid.querySelectorAll(".select-card.selected").length === 0;
@@ -633,16 +632,17 @@ async function renderRemoveGrid(query = "") {
 document.getElementById("removeSelectedBtn").addEventListener("click", async () => {
   const grid = document.getElementById("removeCaseGrid");
   const selected = Array.from(grid.querySelectorAll(".select-card.selected"));
-  if (!selected.length) return;
+  if (selected.length === 0) return;
 
   if (!confirm(`Remove ${selected.length} case(s)?`)) return;
 
-  // Delete selected cases in Supabase
+  // Delete each selected case in Supabase
   for (const card of selected) {
-    await deleteCaseFromSupabase(card.dataset.id);
+    const caseId = card.dataset.id;
+    await deleteCaseFromSupabase(caseId);
   }
 
-  // Refresh both grids
+  // Re-render grid and home grid
   await renderRemoveGrid(document.getElementById("removeSearchInput").value.trim());
   await rebuildHomeGrid();
   closeModal("removeCaseModal");
@@ -849,14 +849,19 @@ document
   .addEventListener("click", () => closeModal("editCaseModal"));
 
 // Remove Case Modal
-document.getElementById("removeCaseBtn").addEventListener("click", () => {
-  document.getElementById("removeSearchInput").value = "";
-  renderRemoveGrid("");
-  openModal("removeCaseModal");
-});
-document
-  .getElementById("cancelRemoveCaseBtn")
-  .addEventListener("click", () => closeModal("removeCaseModal"));
 document
   .getElementById("removeSelectedBtn")
-  .addEventListener("click", confirmRemoveCases);
+  .addEventListener("click", async () => {
+    const grid = document.getElementById("removeCaseGrid");
+    const selected = Array.from(grid.querySelectorAll(".select-card.selected"));
+    if (selected.length === 0) return;
+    if (!confirm(`Remove ${selected.length} case(s)?`)) return;
+
+    for (const card of selected) {
+      const caseId = card.dataset.id; // Supabase ID
+      await deleteCaseFromSupabase(caseId);
+    }
+
+    await renderRemoveGrid(document.getElementById("removeSearchInput").value.trim());
+    await rebuildHomeGrid();
+  });
