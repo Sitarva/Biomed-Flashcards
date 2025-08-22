@@ -535,3 +535,17 @@ input[type="text"]:focus {
     max-height: 300px; /* allow images to scale bigger */
   }
 }
+/* Slightly smaller text for stems on all screens */
+.flip-card .flash-side,
+.flip-card .content-body {
+  font-size: 0.9rem; /* ~10% smaller than default */
+  line-height: 1.4;  /* keeps readability */
+}
+
+/* Optional: make stems a bit smaller on small screens too */
+@media (max-width: 600px) {
+  .flip-card .flash-side,
+  .flip-card .content-body {
+    font-size: 0.85rem;
+  }
+}
