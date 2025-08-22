@@ -101,23 +101,17 @@ async function deleteCaseFromSupabase(caseId) {
 }
 
 // ---------------------------
-// Utilities & State
+// State & Utilities
 // ---------------------------
-const casesContainer = document.getElementById("casesContainer");
-const noResults = document.getElementById("noResults");
-
 let addEditors = new Map();
 let editEditors = new Map();
-let currentEditIndex = null;
+let currentEditCaseId = null;
+let homeCases = [];
 
 const uid = () => "id-" + Math.random().toString(36).slice(2) + Date.now();
 
-function openModal(id) {
-  document.getElementById(id).hidden = false;
-}
-function closeModal(id) {
-  document.getElementById(id).hidden = true;
-}
+function openModal(id) { document.getElementById(id).hidden = false; }
+function closeModal(id) { document.getElementById(id).hidden = true; }
 
 // ---------------------------
 // Home grid
@@ -285,448 +279,114 @@ async function previewImage(input) {
 }
 
 // ---------------------------
-// Add Case
-// ---------------------------
-
-// Clear & open modal
-document.getElementById("addCaseBtn").addEventListener("click", () => {
-  addEditors = new Map();
-  document.getElementById("caseTitle").value = "";
-  document.getElementById("stemsContainer").innerHTML = "<h3>Stems</h3>";
-  document.getElementById("flashcardsContainer").innerHTML = "<h3>Flashcards</h3>";
-  openModal("addCaseModal");
-});
-
-// Attach Save Case listener once
-const saveCaseBtn = document.getElementById("saveCaseBtn");
-saveCaseBtn.replaceWith(saveCaseBtn.cloneNode(true)); // remove any previous listeners
-document.getElementById("saveCaseBtn").addEventListener("click", saveCase);
-
-async function saveCase() {
-  const title = document.getElementById("caseTitle").value.trim();
-  if (!title) return alert("Please enter a case title.");
-
-  try {
-    // Collect stems
-    const stems = Array.from(
-      document.querySelectorAll("#stemsContainer .stem-input")
-    )
-      .map((i) => i.value.trim())
-      .filter(Boolean);
-
-    // Collect flashcards
-    const flashcards = [];
-    for (const fc of document.querySelectorAll("#flashcardsContainer .flashcard")) {
-      const id = fc.dataset.cardId;
-      const ed = addEditors.get(id);
-      const [frontFileInput, backFileInput] = fc.querySelectorAll(".image-upload");
-
-      let frontImage = null;
-      let backImage = null;
-
-      if (frontFileInput && frontFileInput.files[0]) {
-        frontImage = await uploadToSupabase(frontFileInput.files[0]);
-      }
-      if (backFileInput && backFileInput.files[0]) {
-        backImage = await uploadToSupabase(backFileInput.files[0]);
-      }
-
-      flashcards.push({
-        front: ed ? ed.front.root.innerHTML : "",
-        back: ed ? ed.back.root.innerHTML : "",
-        frontImage,
-        backImage
-      });
-    }
-
-    const caseObj = { title, stems, flashcards };
-    console.debug("DEBUG: Case object to save:", caseObj);
-
-    // Save to Supabase
-    const savedCase = await saveCaseToSupabase(caseObj);
-    console.debug("DEBUG: Saved case returned from Supabase:", savedCase);
-
-    if (!savedCase) throw new Error("Supabase save returned null");
-
-    // Update local DOM
-    homeCases.push(savedCase);
-    addCaseCardToDOM(savedCase.title, savedCase.id);
-    noResults.hidden = true;
-    closeModal("addCaseModal");
-
-  } catch (err) {
-    console.error("DEBUG: Error in saveCase:", err);
-  }
-}
-
-// ---------------------------
 // Edit Case
 // ---------------------------
-
-let editEditors = new Map(); // store Quill instances for editing
-
-// Open Edit Case pre-modal
-document.getElementById("editCaseBtn").addEventListener("click", async () => {
-  openModal("editCasePreModal");
-  renderEditCaseList();
-});
-
-// Cancel button for pre-modal
-document.getElementById("cancelEditPreBtn").addEventListener("click", () => {
-  closeModal("editCasePreModal");
-});
-
-// Cancel button for edit modal
-document.getElementById("cancelEditCaseBtn").addEventListener("click", () => {
-  closeModal("editCaseModal");
-});
-
-// Render list of cases to edit
-async function renderEditCaseList() {
-  const editCaseList = document.getElementById("editCaseList");
-  editCaseList.innerHTML = "";
-
-  const cases = await getCasesFromSupabase();
-
-  if (!cases.length) {
-    document.getElementById("editNoCases").hidden = false;
-    return;
-  }
-  document.getElementById("editNoCases").hidden = true;
-
-  cases.forEach((c) => {
-    const card = document.createElement("div");
-    card.className = "select-card";
-    card.textContent = c.title;
-    card.addEventListener("click", () => openEditCaseModal(c));
-    editCaseList.appendChild(card);
-  });
-}
-
-// Open Edit Case modal and populate fields
-function openEditCaseModal(caseObj) {
-  editEditors = new Map(); // clear previous editors
-  document.getElementById("editCaseTitle").value = caseObj.title;
-  document.getElementById("editStemsContainer").innerHTML = "<h3>Stems</h3>";
-  document.getElementById("editFlashcardsContainer").innerHTML = "<h3>Flashcards</h3>";
-
-  // Load stems
-  caseObj.stems.forEach((stem) => addEditStem(stem));
-
-  // Load flashcards
-  caseObj.flashcards.forEach((fc, index) => addEditFlashcard(fc, index));
-
-  // Save the currently editing case ID
-  document.getElementById("saveEditedCaseBtn").dataset.caseId = caseObj.id;
-
-  closeModal("editCasePreModal");
-  openModal("editCaseModal");
-}
-
-// Attach Add Stem / Flashcard buttons
-document.getElementById("editAddStemBtn").addEventListener("click", () => addEditStem());
-document.getElementById("editAddFlashcardBtn").addEventListener("click", () => addEditFlashcard());
-
-// ---------------------------
-// Helper functions for stems/flashcards
-// ---------------------------
-
-function addEditStem(value = "") {
-  const container = document.getElementById("editStemsContainer");
-  const row = document.createElement("div");
-  row.className = "stem-row";
-
-  const input = document.createElement("input");
-  input.type = "text";
-  input.className = "stem-input";
-  input.value = value;
-
-  const removeBtn = document.createElement("button");
-  removeBtn.className = "icon-btn";
-  removeBtn.textContent = "×";
-  removeBtn.addEventListener("click", () => row.remove());
-
-  row.append(input, removeBtn);
-  container.appendChild(row);
-}
-
-function addEditFlashcard(flashcard = { front: "", back: "" }, index = Date.now()) {
-  const container = document.getElementById("editFlashcardsContainer");
-  const fcDiv = document.createElement("div");
-  fcDiv.className = "flashcard";
-  fcDiv.dataset.cardId = index;
-
-  // Header with remove button
-  const header = document.createElement("div");
-  header.className = "flashcard-header";
-  header.innerHTML = `<div class="flashcard-header-title">Flashcard</div>`;
-  const removeBtn = document.createElement("button");
-  removeBtn.className = "icon-btn";
-  removeBtn.textContent = "×";
-  removeBtn.addEventListener("click", () => fcDiv.remove());
-  header.appendChild(removeBtn);
-  header.addEventListener("click", () => fcDiv.classList.toggle("collapsed"));
-
-  // Body
-  const body = document.createElement("div");
-  body.className = "flashcard-body";
-
-  const frontDiv = document.createElement("div");
-  frontDiv.className = "flash-side front";
-  body.appendChild(frontDiv);
-
-  const backDiv = document.createElement("div");
-  backDiv.className = "flash-side back";
-  body.appendChild(backDiv);
-
-  fcDiv.append(header, body);
-  container.appendChild(fcDiv);
-
-  // Initialize Quill editors
-  const quillFront = new Quill(frontDiv, { theme: "snow" });
-  quillFront.root.innerHTML = flashcard.front || "";
-  const quillBack = new Quill(backDiv, { theme: "snow" });
-  quillBack.root.innerHTML = flashcard.back || "";
-
-  editEditors.set(fcDiv.dataset.cardId, { front: quillFront, back: quillBack });
-}
-
-async function updateCaseInSupabase(caseId, caseObj) {
-  const { data, error } = await supabaseClient
-    .from("cases")
-    .update({
-      title: caseObj.title,
-      stems: caseObj.stems,
-      flashcards: caseObj.flashcards
-    })
-    .eq("id", caseId)
-    .select();  // <--- Add this
-
-  if (error) {
-    console.error("Error updating case:", error);
-    return null;
-  }
-
-  return data[0];
-}
-
-// ---------------------------
-// Edit Case
-// ---------------------------
-
-let editEditors = new Map();
-let currentEditCaseId = null;
-
-// Open pre-modal
 document.getElementById("editCaseBtn").addEventListener("click", async () => {
   document.getElementById("editSearchInput").value = "";
   await renderEditCaseList("");
   openModal("editCasePreModal");
 });
 
-// Filter cases in pre-modal
-document.getElementById("editSearchInput").addEventListener("input", async function () {
+document.getElementById("editSearchInput").addEventListener("input", async function() {
   await renderEditCaseList(this.value.trim());
 });
 
-// Render cases in Edit pre-modal
-async function renderEditCaseList(query) {
+async function renderEditCaseList(query = "") {
   const list = document.getElementById("editCaseList");
   const noCasesMsg = document.getElementById("editNoCases");
   list.innerHTML = "";
 
-  const cases = await getCasesFromSupabase(); // fetch all cases
-  const filtered = cases
-    .map((c) => ({ title: c.title, id: c.id }))
-    .filter((x) => x.title.toLowerCase().includes(query.toLowerCase()));
+  const cases = await getCasesFromSupabase();
+  homeCases = cases; // update local copy
 
-  if (!filtered.length) {
-    noCasesMsg.hidden = false;
-    return;
-  }
+  const filtered = cases.filter(c => c.title.toLowerCase().includes(query.toLowerCase()));
+
+  if (!filtered.length) { noCasesMsg.hidden = false; return; }
   noCasesMsg.hidden = true;
 
-  filtered.forEach((item) => {
+  filtered.forEach(c => {
     const card = document.createElement("div");
     card.className = "select-card";
-    card.textContent = item.title;
-    card.addEventListener("click", () => openCaseForEdit(item.id));
+    card.textContent = c.title;
+    card.addEventListener("click", () => openCaseForEdit(c.id));
     list.appendChild(card);
   });
 }
 
-// Open Edit Case modal
 async function openCaseForEdit(caseId) {
   closeModal("editCasePreModal");
   editEditors = new Map();
   currentEditCaseId = caseId;
 
-  const cases = await getCasesFromSupabase();
-  const c = cases.find((x) => x.id === caseId);
+  const c = homeCases.find(x => x.id === caseId);
   if (!c) return alert("Case not found.");
 
   document.getElementById("editCaseTitle").value = c.title;
+  document.getElementById("editStemsContainer").innerHTML = "<h3>Stems</h3>";
+  document.getElementById("editFlashcardsContainer").innerHTML = "<h3>Flashcards</h3>";
 
-  const stemsWrap = document.getElementById("editStemsContainer");
-  const fcsWrap = document.getElementById("editFlashcardsContainer");
-  stemsWrap.innerHTML = "<h3>Stems</h3>";
-  fcsWrap.innerHTML = "<h3>Flashcards</h3>";
-
-  // Add stems
-  c.stems.forEach((s) => addEditStem(s));
-
-  // Add flashcards
-  c.flashcards.forEach((fc) => addEditFlashcard(fc));
+  c.stems.forEach(s => addEditStem(s));
+  c.flashcards.forEach(fc => addEditFlashcard(fc));
 
   openModal("editCaseModal");
 }
 
-// Add stem helper
-function addEditStem(value = "") {
+function addEditStem(value="") {
   const container = document.getElementById("editStemsContainer");
   const row = document.createElement("div");
   row.className = "stem-row";
 
-  const input = document.createElement("input");
-  input.type = "text";
-  input.className = "stem-input";
-  input.value = value;
-
-  const removeBtn = document.createElement("button");
-  removeBtn.className = "icon-btn";
-  removeBtn.textContent = "×";
+  const input = document.createElement("input"); input.type="text"; input.className="stem-input"; input.value=value;
+  const removeBtn = document.createElement("button"); removeBtn.className="icon-btn"; removeBtn.textContent="×";
   removeBtn.addEventListener("click", () => row.remove());
 
-  row.append(input, removeBtn);
-  container.appendChild(row);
+  row.append(input, removeBtn); container.appendChild(row);
 }
 
-// Add flashcard helper
-function addEditFlashcard(flashcard = { front: "", back: "", frontImage: null, backImage: null }) {
+function addEditFlashcard(fc={front:"", back:"", frontImage:null, backImage:null}) {
   const container = document.getElementById("editFlashcardsContainer");
-  const fcDiv = document.createElement("div");
-  fcDiv.className = "flashcard";
-  fcDiv.dataset.cardId = Date.now();
+  const div = document.createElement("div"); div.className="flashcard"; div.dataset.cardId = uid();
 
-  // Header with remove + collapse
-  const header = document.createElement("div");
-  header.className = "flashcard-header";
-  header.innerHTML = `<div class="flashcard-header-title">Flashcard</div>`;
-  const removeBtn = document.createElement("button");
-  removeBtn.className = "icon-btn";
-  removeBtn.textContent = "×";
-  removeBtn.addEventListener("click", () => fcDiv.remove());
+  // Header
+  const header = document.createElement("div"); header.className="flashcard-header"; 
+  header.innerHTML=`<div class="flashcard-header-title">Flashcard</div>`;
+  const removeBtn = document.createElement("button"); removeBtn.className="icon-btn"; removeBtn.textContent="×";
+  removeBtn.addEventListener("click", e => { e.stopPropagation(); div.remove(); });
   header.appendChild(removeBtn);
-  header.addEventListener("click", () => fcDiv.classList.toggle("collapsed"));
+  header.addEventListener("click", () => div.classList.toggle("collapsed"));
 
   // Body
-  const body = document.createElement("div");
-  body.className = "flashcard-body";
+  const body = document.createElement("div"); body.className="flashcard-body";
+  const frontDiv = document.createElement("div"); frontDiv.className="flash-side front"; body.appendChild(frontDiv);
+  const backDiv = document.createElement("div"); backDiv.className="flash-side back"; body.appendChild(backDiv);
 
-  // Front side
-  const frontDiv = document.createElement("div");
-  frontDiv.className = "flash-side front";
-  if (flashcard.frontImage) {
-    const img = document.createElement("img");
-    img.src = flashcard.frontImage;
-    img.className = "flash-image";
-    frontDiv.appendChild(img);
-  }
-  body.appendChild(frontDiv);
+  div.append(header, body); container.appendChild(div);
 
-  // Back side
-  const backDiv = document.createElement("div");
-  backDiv.className = "flash-side back";
-  if (flashcard.backImage) {
-    const img = document.createElement("img");
-    img.src = flashcard.backImage;
-    img.className = "flash-image";
-    backDiv.appendChild(img);
-  }
-  body.appendChild(backDiv);
+  const quillFront = new Quill(frontDiv, {theme:"snow"}); quillFront.root.innerHTML=fc.front;
+  const quillBack = new Quill(backDiv, {theme:"snow"}); quillBack.root.innerHTML=fc.back;
 
-  // File inputs
-  const frontFileInput = document.createElement("input");
-  frontFileInput.type = "file";
-  frontFileInput.className = "image-upload";
-  body.appendChild(frontFileInput);
-
-  const backFileInput = document.createElement("input");
-  backFileInput.type = "file";
-  backFileInput.className = "image-upload";
-  body.appendChild(backFileInput);
-
-  fcDiv.append(header, body);
-  container.appendChild(fcDiv);
-
-  // Initialize Quill editors
-  const quillFront = new Quill(frontDiv, { theme: "snow" });
-  quillFront.root.innerHTML = flashcard.front || "";
-  const quillBack = new Quill(backDiv, { theme: "snow" });
-  quillBack.root.innerHTML = flashcard.back || "";
-
-  editEditors.set(fcDiv.dataset.cardId, { front: quillFront, back: quillBack });
+  editEditors.set(div.dataset.cardId, {front:quillFront, back:quillBack});
 }
 
-// Add buttons
-document.getElementById("editAddStemBtn").addEventListener("click", () => addEditStem());
-document.getElementById("editAddFlashcardBtn").addEventListener("click", () => addEditFlashcard());
-
-// Save edited case
 document.getElementById("saveEditedCaseBtn").addEventListener("click", async () => {
   if (!currentEditCaseId) return;
 
   const title = document.getElementById("editCaseTitle").value.trim();
   if (!title) return alert("Please enter a case title.");
 
-  const stems = Array.from(document.querySelectorAll("#editStemsContainer .stem-input"))
-    .map((i) => i.value.trim())
-    .filter(Boolean);
-
+  const stems = Array.from(document.querySelectorAll("#editStemsContainer .stem-input")).map(i=>i.value.trim()).filter(Boolean);
   const flashcards = [];
-  for (const fc of document.querySelectorAll("#editFlashcardsContainer .flashcard")) {
+
+  for(const fc of document.querySelectorAll("#editFlashcardsContainer .flashcard")) {
     const id = fc.dataset.cardId;
     const ed = editEditors.get(id);
-    const [frontFileInput, backFileInput] = fc.querySelectorAll(".image-upload");
-
-    let frontImage = null;
-    let backImage = null;
-    if (frontFileInput && frontFileInput.files[0]) {
-      frontImage = await uploadToSupabase(frontFileInput.files[0]);
-    }
-    if (backFileInput && backFileInput.files[0]) {
-      backImage = await uploadToSupabase(backFileInput.files[0]);
-    }
-
-    flashcards.push({
-      front: ed ? ed.front.root.innerHTML : "",
-      back: ed ? ed.back.root.innerHTML : "",
-      frontImage,
-      backImage
-    });
+    flashcards.push({front:ed.front.root.innerHTML, back:ed.back.root.innerHTML});
   }
 
-  const caseObj = { title, stems, flashcards };
-  try {
-    const updatedCase = await updateCaseInSupabase(currentEditCaseId, caseObj);
-
-    if (!updatedCase) throw new Error("Supabase update returned null");
-
-    // Update local grid
-    const idx = homeCases.findIndex((c) => c.id === currentEditCaseId);
-    if (idx > -1) homeCases[idx] = updatedCase;
-    rebuildHomeGrid();
-    closeModal("editCaseModal");
-    alert("Case updated successfully!");
-  } catch (err) {
-    console.error("Error saving edited case:", err);
-    alert("Failed to save edited case.");
-  }
-});
-
-// Cancel button
-document.getElementById("cancelEditCaseBtn").addEventListener("click", () => {
-  closeModal("editCaseModal");
+  const caseObj = {title, stems, flashcards};
+  const updated = await updateCaseInSupabase(currentEditCaseId, caseObj);
+  if(!updated) return alert("Failed to save case.");
+  rebuildHomeGrid(); closeModal("editCaseModal"); alert("Case updated!");
 });
 
 // ---------------------------
