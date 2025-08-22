@@ -146,7 +146,7 @@ function addCaseCardToDOM(title, caseId) {
   div.textContent = title;
   div.style.cursor = "pointer";
 
-  div.onclick = () => openCaseStudy(caseId); // use Supabase case ID
+  div.onclick = () => window.openCaseStudy(i);
 
   casesContainer.insertBefore(div, noResults);
 }
@@ -730,7 +730,7 @@ if (document.getElementById("editFlashcardsContainer")) {
       card.frontHtml || '<span class="muted">[No front]</span>'
     }${card.frontImage ? `<img src="${card.frontImage}" class="flash-image">` : ""}</div>`;
 
-    const questionText = plainTextFromHtml(card.frontHtml) || "[No question]";
+    const questionText = plainTextFromHtml(card.frontHtml) || "";
     backContainer.innerHTML = `<div class="content-title">${questionText}</div><div class="content-body">${
       card.backHtml || '<span class="muted">[No answer]</span>'
     }${card.backImage ? `<img src="${card.backImage}" class="flash-image">` : ""}</div>`;
