@@ -500,3 +500,18 @@ input[type="text"]:focus {
   max-width: 100%;
   max-height: 200px;
 }
+/* Increase flashcard size on small screens */
+@media (max-width: 600px) {
+  .flip-card {
+    width: 90%;        /* take most of modal width */
+    max-width: none;   /* remove the desktop max-width */
+    min-height: 300px; /* keep height reasonable */
+  }
+  .flip-card-front,
+  .flip-card-back {
+    min-height: 300px; /* match container */
+  }
+  .flash-image {
+    max-height: 300px; /* allow images to scale bigger */
+  }
+}
