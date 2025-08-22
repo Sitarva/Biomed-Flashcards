@@ -412,7 +412,7 @@ function renderEditCaseList(query = "") {
   });
 }
 
-async function openCaseForEdit(caseId) {
+window.openCaseForEdit = async function(caseId) {
   closeModal("editCasePreModal");
   editEditors = new Map();
   currentEditCaseId = caseId;
@@ -440,7 +440,7 @@ async function openCaseForEdit(caseId) {
   });
 
   openModal("editCaseModal");
-}
+};
 
 async function saveEditedCase() {
   if (!currentEditCaseId) return;
