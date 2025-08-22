@@ -366,6 +366,9 @@ async function saveCase() {
     console.error("DEBUG: Error in saveCase:", err);
     alert("Failed to save case. Check console for details.");
   }
+  // Refresh home grid
+  await rebuildHomeGrid();
+  closeModal("editCaseModal");
 }
 
 // ---------------------------
