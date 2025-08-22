@@ -125,14 +125,18 @@ function closeModal(id) {
 let homeCases = []; // store fetched cases for DOM rendering & search
 
 async function rebuildHomeGrid() {
-  // Fetch cases from Supabase
-  homeCases = await getCasesFromSupabase();
+  const casesContainer = document.getElementById("casesContainer");
+  const noResults = document.getElementById("noResults");
+
+  // Fetch fresh cases from Supabase
+  const homeCases = await getCasesFromSupabase();
 
   // Clear existing DOM
-  casesContainer.querySelectorAll(".case-item").forEach((n) => n.remove());
+  casesContainer.querySelectorAll(".case-item").forEach(n => n.remove());
 
   // Add cards to DOM
-  homeCases.forEach((c, i) => addCaseCardToDOM(c.title, c.id));
+  homeCases.forEach(c => addCaseCardToDOM(c.title, c.id));
+
   noResults.hidden = homeCases.length !== 0;
 }
 
