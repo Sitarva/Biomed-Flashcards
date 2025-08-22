@@ -754,9 +754,9 @@ if (document.getElementById("editFlashcardsContainer")) {
   closeBtn.onclick = () => modal.hidden = true;
 
   startBtn?.addEventListener("click", (e) => {
-    console.log("Fetched cases:", cases);
     e.preventDefault();
     const cases = getCasesFromSupabase();
+    console.log("Fetched cases:", cases);
     if (!cases.length) return alert("No flashcards found.");
 
     shuffleArray(cases);
