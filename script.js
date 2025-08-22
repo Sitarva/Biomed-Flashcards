@@ -589,73 +589,76 @@ function removeFlashcard(card, container, mapRef) {
 }
 
 // ---------------------------
-// Remove Case Modal
+// Remove Case
 // ---------------------------
+
+// Open Remove Case Modal
 document.getElementById("removeCaseBtn").addEventListener("click", async () => {
   document.getElementById("removeSearchInput").value = "";
   await renderRemoveGrid(""); // fetch fresh cases
   openModal("removeCaseModal");
 });
 
-document
-  .getElementById("cancelRemoveCaseBtn")
-  .addEventListener("click", () => closeModal("removeCaseModal"));
+// Cancel button
+document.getElementById("cancelRemoveCaseBtn").addEventListener("click", () =>
+  closeModal("removeCaseModal")
+);
 
-document
-  .getElementById("removeSelectedBtn")
-  .addEventListener("click", async () => {
-    const grid = document.getElementById("removeCaseGrid");
-    const selected = Array.from(grid.querySelectorAll(".select-card.selected"));
-    if (selected.length === 0) return;
+// Search input
+document.getElementById("removeSearchInput").addEventListener("input", async function () {
+  await renderRemoveGrid(this.value.trim());
+});
 
-    // Single prompt
-    if (!confirm(`Remove ${selected.length} case(s)?`)) return;
-
-    // Delete each selected case in Supabase
-    for (const card of selected) {
-      const caseId = card.dataset.id; // Supabase ID
-      await deleteCaseFromSupabase(caseId);
-    }
-
-    // Re-render grid and home grid
-    await renderRemoveGrid(document.getElementById("removeSearchInput").value.trim());
-    await rebuildHomeGrid();
-  });
-
+// Render Remove Grid
 async function renderRemoveGrid(query) {
   const grid = document.getElementById("removeCaseGrid");
   const empty = document.getElementById("removeNoCases");
   const removeBtn = document.getElementById("removeSelectedBtn");
 
   removeBtn.disabled = true;
-  grid.innerHTML = ""; // clear old DOM
+  grid.innerHTML = ""; // Clear previous entries
 
-  // Fetch fresh cases from Supabase
-  const cases = await getCasesFromSupabase();
+  const cases = await getCasesFromSupabase(); // fresh fetch
+  const filtered = cases.filter(c => c.title.toLowerCase().includes(query.toLowerCase()));
 
-  const items = cases.filter(c =>
-    c.title.toLowerCase().includes(query.toLowerCase())
-  );
-
-  if (items.length === 0) {
+  if (filtered.length === 0) {
     empty.hidden = false;
     return;
   }
   empty.hidden = true;
 
-  items.forEach(c => {
+  filtered.forEach(c => {
     const card = document.createElement("div");
     card.className = "select-card";
     card.textContent = c.title;
     card.dataset.id = c.id; // Supabase case ID
+
     card.onclick = () => {
       card.classList.toggle("selected");
-      removeBtn.disabled =
-        grid.querySelectorAll(".select-card.selected").length === 0;
+      removeBtn.disabled = grid.querySelectorAll(".select-card.selected").length === 0;
     };
+
     grid.appendChild(card);
   });
 }
+
+// Remove Selected Cases
+document.getElementById("removeSelectedBtn").addEventListener("click", async () => {
+  const grid = document.getElementById("removeCaseGrid");
+  const selected = Array.from(grid.querySelectorAll(".select-card.selected"));
+  if (selected.length === 0) return;
+
+  if (!confirm(`Remove ${selected.length} case(s)?`)) return;
+
+  for (const card of selected) {
+    const caseId = card.dataset.id;
+    await deleteCaseFromSupabase(caseId);
+  }
+
+  // Refresh grids
+  await renderRemoveGrid(document.getElementById("removeSearchInput").value.trim());
+  await rebuildHomeGrid();
+});
 
 // ---------------------------
 // Init
