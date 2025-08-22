@@ -31,6 +31,74 @@ async function uploadToSupabase(file) {
 }
 
 // ---------------------------
+// Supabase Database Helpers
+// ---------------------------
+
+// Fetch all cases from Supabase
+async function getCasesFromSupabase() {
+  const { data, error } = await supabaseClient
+    .from("cases")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching cases:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
+// Add a new case to Supabase
+async function saveCaseToSupabase(caseObj) {
+  const { data, error } = await supabaseClient
+    .from("cases")
+    .insert([{ 
+      title: caseObj.title,
+      stems: caseObj.stems,
+      flashcards: caseObj.flashcards
+    }]);
+
+  if (error) {
+    console.error("Error saving case:", error);
+    return null;
+  }
+
+  return data[0];
+}
+
+// Update an existing case in Supabase
+async function updateCaseInSupabase(caseId, caseObj) {
+  const { data, error } = await supabaseClient
+    .from("cases")
+    .update({
+      title: caseObj.title,
+      stems: caseObj.stems,
+      flashcards: caseObj.flashcards
+    })
+    .eq("id", caseId);
+
+  if (error) {
+    console.error("Error updating case:", error);
+    return null;
+  }
+
+  return data[0];
+}
+
+// Delete a case from Supabase (optional)
+async function deleteCaseFromSupabase(caseId) {
+  const { error } = await supabaseClient
+    .from("cases")
+    .delete()
+    .eq("id", caseId);
+
+  if (error) {
+    console.error("Error deleting case:", error);
+  }
+}
+
+// ---------------------------
 // Utilities & State
 // ---------------------------
 const casesContainer = document.getElementById("casesContainer");
@@ -50,52 +118,45 @@ function closeModal(id) {
 }
 
 // ---------------------------
-// Helper: Convert file to Base64
-// ---------------------------
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = (e) => reject(e);
-    reader.readAsDataURL(file);
-  });
-}
-
-// ---------------------------
 // Home grid
 // ---------------------------
-function getCases() {
-  return JSON.parse(localStorage.getItem("cases") || "[]");
-}
-function setCases(arr) {
-  localStorage.setItem("cases", JSON.stringify(arr));
-}
+let homeCases = []; // store fetched cases for DOM rendering & search
 
-function rebuildHomeGrid() {
+async function rebuildHomeGrid() {
+  // Fetch cases from Supabase
+  homeCases = await getCasesFromSupabase();
+
+  // Clear existing DOM
   casesContainer.querySelectorAll(".case-item").forEach((n) => n.remove());
-  const cases = getCases();
-  cases.forEach((c, i) => addCaseCardToDOM(c.title, i));
-  noResults.hidden = cases.length !== 0;
+
+  // Add cards to DOM
+  homeCases.forEach((c, i) => addCaseCardToDOM(c.title, c.id));
+  noResults.hidden = homeCases.length !== 0;
 }
 
-function addCaseCardToDOM(title, index) {
+function addCaseCardToDOM(title, caseId) {
   const div = document.createElement("div");
   div.className = "case-item";
   div.textContent = title;
   div.style.cursor = "pointer";
-  div.onclick = () => openCaseStudy(index);
+
+  div.onclick = () => openCaseStudy(caseId); // use Supabase case ID
+
   casesContainer.insertBefore(div, noResults);
 }
 
+// Search input
 document.getElementById("searchInput").addEventListener("input", function () {
   const q = this.value.trim().toLowerCase();
   const items = Array.from(casesContainer.querySelectorAll(".case-item"));
   let visible = 0;
+
   items.forEach((it) => {
     const match = it.textContent.toLowerCase().includes(q);
     it.hidden = !match;
     if (match) visible++;
   });
+
   noResults.hidden = visible !== 0;
 });
 
@@ -252,7 +313,7 @@ async function saveCase() {
     let frontImage = null;
     let backImage = null;
 
-    // ✅ Supabase upload instead of Base64
+    // Supabase upload instead of Base64
     if (frontFileInput && frontFileInput.files[0]) {
       frontImage = await uploadToSupabase(frontFileInput.files[0]);
     }
