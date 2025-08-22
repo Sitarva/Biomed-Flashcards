@@ -286,7 +286,7 @@ function previewImage(input) {
 }
 
 // ---------------------------
-// Add case
+// Add Case
 // ---------------------------
 document.getElementById("addCaseBtn").addEventListener("click", () => {
   addEditors = new Map();
@@ -314,15 +314,13 @@ async function saveCase() {
     const ed = addEditors.get(id);
     const [frontFileInput, backFileInput] = fc.querySelectorAll(".image-upload");
 
-    let frontImage = null;
-    let backImage = null;
+    const frontImage = frontFileInput?.files[0]
+      ? await uploadToSupabase(frontFileInput.files[0])
+      : fc.querySelector("img.preview-image")?.src || null;
 
-    if (frontFileInput && frontFileInput.files[0]) {
-      frontImage = await uploadToSupabase(frontFileInput.files[0]);
-    }
-    if (backFileInput && backFileInput.files[0]) {
-      backImage = await uploadToSupabase(backFileInput.files[0]);
-    }
+    const backImage = backFileInput?.files[0]
+      ? await uploadToSupabase(backFileInput.files[0])
+      : fc.querySelector("img.preview-image")?.src || null;
 
     flashcards.push({
       front: ed ? ed.front.root.innerHTML : "",
@@ -340,9 +338,12 @@ async function saveCase() {
     console.log("DEBUG: Saved case returned from Supabase:", savedCase);
 
     if (savedCase) {
-      // Update the in-memory array and DOM
+      // Update in-memory array
       homeCases.push(savedCase);
-      addCaseCardToDOM(savedCase.title, savedCase.id);
+
+      // Properly render the case in the home grid
+      renderHomeCase(savedCase);
+
       noResults.hidden = true;
       closeModal("addCaseModal");
     }
@@ -350,6 +351,37 @@ async function saveCase() {
     console.error("DEBUG: Error in saveCase:", err);
     alert("Failed to save case. Check console for details.");
   }
+}
+
+// ---------------------------
+// Render a case on the Home Grid
+// ---------------------------
+function renderHomeCase(c) {
+  const grid = document.getElementById("homeGrid"); // assuming this is your container
+  const card = document.createElement("div");
+  card.className = "case-card";
+  card.dataset.caseId = c.id;
+
+  card.innerHTML = `
+    <h3>${c.title}</h3>
+    <div class="stems-preview">${(c.stems || []).map(s => `<div>${s}</div>`).join('')}</div>
+    <div class="flashcards-preview">
+      ${(c.flashcards || []).map(fc => `
+        <div class="flashcard-preview">
+          <div class="front" style="border:1px solid #ccc; padding:5px;">
+            ${fc.front || ''}
+            ${fc.frontImage ? `<img src="${fc.frontImage}" style="width:100px; display:block; margin-top:5px;">` : ''}
+          </div>
+          <div class="back" style="border:1px solid #ccc; padding:5px; margin-top:5px;">
+            ${fc.back || ''}
+            ${fc.backImage ? `<img src="${fc.backImage}" style="width:100px; display:block; margin-top:5px;">` : ''}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  grid.appendChild(card);
 }
 
 // ---------------------------
