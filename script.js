@@ -646,13 +646,13 @@ async function renderRemoveGrid(query) {
 // ---------------------------
 window.addEventListener("DOMContentLoaded", rebuildHomeGrid);
 
-// Sortable init for flashcards
+// Sortable init for Add Case flashcards
 if (document.getElementById("flashcardsContainer")) {
   new Sortable(document.getElementById("flashcardsContainer"), {
     handle: ".flashcard-header",
     animation: 150,
     draggable: ".flashcard",
-    onEnd: function () {
+    onEnd: () => {
       const cards = document
         .getElementById("flashcardsContainer")
         .querySelectorAll(".flashcard");
@@ -663,12 +663,14 @@ if (document.getElementById("flashcardsContainer")) {
     },
   });
 }
+
+// Sortable init for Edit Case flashcards
 if (document.getElementById("editFlashcardsContainer")) {
   new Sortable(document.getElementById("editFlashcardsContainer"), {
     handle: ".flashcard-header",
     animation: 150,
     draggable: ".flashcard",
-    onEnd: function () {
+    onEnd: () => {
       const cards = document
         .getElementById("editFlashcardsContainer")
         .querySelectorAll(".flashcard");
@@ -853,4 +855,3 @@ document
 document
   .getElementById("removeSelectedBtn")
   .addEventListener("click", handleRemoveSelected);
-initModals();
