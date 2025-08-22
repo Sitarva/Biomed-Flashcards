@@ -589,99 +589,76 @@ function removeFlashcard(card, container, mapRef) {
 }
 
 // ---------------------------
-// Remove Case Modal (fixed)
+// Modal Button Listeners
 // ---------------------------
-function initRemoveCaseModal() {
-  const removeBtn = document.getElementById("removeSelectedBtn");
-  const removeInput = document.getElementById("removeSearchInput");
-  const removeCaseBtn = document.getElementById("removeCaseBtn");
-  const cancelBtn = document.getElementById("cancelRemoveCaseBtn");
-  const grid = document.getElementById("removeCaseGrid");
-  const empty = document.getElementById("removeNoCases");
 
-  // Open modal
-  removeCaseBtn.addEventListener("click", async () => {
-    removeInput.value = "";
-    await renderRemoveGrid("");
-    openModal("removeCaseModal");
-  });
+// -------- Add Case --------
+document.getElementById("addCaseBtn").addEventListener("click", () => {
+  addEditors = new Map();
+  document.getElementById("caseTitle").value = "";
+  document.getElementById("stemsContainer").innerHTML = "<h3>Stems</h3>";
+  document.getElementById("flashcardsContainer").innerHTML = "<h3>Flashcards</h3>";
+  openModal("addCaseModal");
+});
 
-  // Cancel button
-  cancelBtn.addEventListener("click", () => closeModal("removeCaseModal"));
+document.getElementById("cancelAddCaseBtn").addEventListener("click", () => closeModal("addCaseModal"));
 
-  // Search input
-  removeInput.addEventListener("input", async () => {
-    await renderRemoveGrid(removeInput.value.trim());
-  });
+document.getElementById("addStemBtn").addEventListener("click", () => addStem("stemsContainer"));
 
-  // Remove selected cases
-  removeBtn.addEventListener("click", async () => {
-    const selected = Array.from(grid.querySelectorAll(".select-card.selected"));
-    if (!selected.length) return;
+document.getElementById("addFlashcardBtn").addEventListener("click", () =>
+  addFlashcard("flashcardsContainer", addEditors)
+);
 
-    if (!confirm(`Remove ${selected.length} case(s)?`)) return;
+document.getElementById("saveCaseBtn").addEventListener("click", saveCase);
 
-    for (const card of selected) {
-      await deleteCaseFromSupabase(card.dataset.id);
-    }
 
-    // Refresh Remove Grid and Home Grid
-    await renderRemoveGrid(removeInput.value.trim());
-    await rebuildHomeGrid();
-  });
+// -------- Edit Case Pre-screen --------
+document.getElementById("editCaseBtn").addEventListener("click", () => {
+  document.getElementById("editSearchInput").value = "";
+  renderEditCaseList("");
+  openModal("editCasePreModal");
+});
 
-  // Render Remove Grid
-  async function renderRemoveGrid(query = "") {
-    removeBtn.disabled = true;
-    grid.innerHTML = ""; // clear existing
+document.getElementById("cancelEditPreBtn").addEventListener("click", () => closeModal("editCasePreModal"));
 
-    const cases = await getCasesFromSupabase();
-    const filtered = cases.filter(c => c.title.toLowerCase().includes(query.toLowerCase()));
+// -------- Edit Case Modal --------
+document.getElementById("editAddStemBtn").addEventListener("click", () => addStem("editStemsContainer"));
 
-    if (!filtered.length) {
-      empty.hidden = false;
-      return;
-    }
-    empty.hidden = true;
+document.getElementById("editAddFlashcardBtn").addEventListener("click", () =>
+  addFlashcard("editFlashcardsContainer", editEditors)
+);
 
-    filtered.forEach(c => {
-      const card = document.createElement("div");
-      card.className = "select-card";
-      card.textContent = c.title;
-      card.dataset.id = c.id;
+document.getElementById("saveEditedCaseBtn").addEventListener("click", saveEditedCase);
 
-      card.onclick = () => {
-        card.classList.toggle("selected");
-        removeBtn.disabled = grid.querySelectorAll(".select-card.selected").length === 0;
-      };
+document.getElementById("cancelEditCaseBtn").addEventListener("click", () => closeModal("editCaseModal"));
 
-      grid.appendChild(card);
-    });
-  }
 
-  // Expose renderRemoveGrid for external calls
-  window.renderRemoveGrid = renderRemoveGrid;
-}
+// -------- Remove Case --------
+document.getElementById("removeCaseBtn").addEventListener("click", async () => {
+  document.getElementById("removeSearchInput").value = "";
+  await renderRemoveGrid(""); // fetch fresh cases
+  openModal("removeCaseModal");
+});
 
-// Initialize once
-initRemoveCaseModal();
+document.getElementById("cancelRemoveCaseBtn").addEventListener("click", () => closeModal("removeCaseModal"));
 
-// Remove Selected Cases
 document.getElementById("removeSelectedBtn").addEventListener("click", async () => {
   const grid = document.getElementById("removeCaseGrid");
   const selected = Array.from(grid.querySelectorAll(".select-card.selected"));
   if (selected.length === 0) return;
-
   if (!confirm(`Remove ${selected.length} case(s)?`)) return;
 
   for (const card of selected) {
-    const caseId = card.dataset.id;
+    const caseId = card.dataset.id; // Supabase ID
     await deleteCaseFromSupabase(caseId);
   }
 
-  // Refresh grids
   await renderRemoveGrid(document.getElementById("removeSearchInput").value.trim());
   await rebuildHomeGrid();
+});
+
+document.getElementById("removeSearchInput").addEventListener("input", async function () {
+  await renderRemoveGrid(this.value.trim());
 });
 
 // ---------------------------
@@ -834,99 +811,66 @@ if (document.getElementById("editFlashcardsContainer")) {
 })();
 
 // ---------------------------
-// Modal Button Listeners (clean)
+// Modal Button Listeners
 // ---------------------------
-function initModals() {
-  // ---------------------------
-  // Add Case Modal
-  // ---------------------------
-  const addCaseBtn = document.getElementById("addCaseBtn");
-  const cancelAddBtn = document.getElementById("cancelAddCaseBtn");
-  const addStemBtn = document.getElementById("addStemBtn");
-  const addFlashcardBtn = document.getElementById("addFlashcardBtn");
-  const saveCaseBtn = document.getElementById("saveCaseBtn");
-
-  addCaseBtn.addEventListener("click", () => {
-    addEditors = new Map();
-    document.getElementById("caseTitle").value = "";
-    document.getElementById("stemsContainer").innerHTML = "<h3>Stems</h3>";
-    document.getElementById("flashcardsContainer").innerHTML = "<h3>Flashcards</h3>";
-    openModal("addCaseModal");
-  });
-
-  cancelAddBtn.addEventListener("click", () => closeModal("addCaseModal"));
-  addStemBtn.addEventListener("click", () => addStem("stemsContainer"));
-  addFlashcardBtn.addEventListener("click", () =>
+// Add Case Modal
+document.getElementById("addCaseBtn").addEventListener("click", () => {
+  addEditors = new Map();
+  document.getElementById("caseTitle").value = "";
+  document.getElementById("stemsContainer").innerHTML = "<h3>Stems</h3>";
+  document.getElementById("flashcardsContainer").innerHTML =
+    "<h3>Flashcards</h3>";
+  openModal("addCaseModal");
+});
+document
+  .getElementById("cancelAddCaseBtn")
+  .addEventListener("click", () => closeModal("addCaseModal"));
+document
+  .getElementById("addStemBtn")
+  .addEventListener("click", () => addStem("stemsContainer"));
+document
+  .getElementById("addFlashcardBtn")
+  .addEventListener("click", () =>
     addFlashcard("flashcardsContainer", addEditors)
   );
-  saveCaseBtn.addEventListener("click", saveCase);
+document.getElementById("saveCaseBtn").addEventListener("click", saveCase);
 
-  // ---------------------------
-  // Edit Case Pre-screen Modal
-  // ---------------------------
-  const editCaseBtn = document.getElementById("editCaseBtn");
-  const cancelEditPreBtn = document.getElementById("cancelEditPreBtn");
+// Edit Case Pre-screen
+document.getElementById("editCaseBtn").addEventListener("click", () => {
+  document.getElementById("editSearchInput").value = "";
+  renderEditCaseList("");
+  openModal("editCasePreModal");
+});
+document
+  .getElementById("cancelEditPreBtn")
+  .addEventListener("click", () => closeModal("editCasePreModal"));
 
-  editCaseBtn.addEventListener("click", async () => {
-    document.getElementById("editSearchInput").value = "";
-    homeCases = await getCasesFromSupabase(); // fetch fresh cases
-    renderEditCaseList("");
-    openModal("editCasePreModal");
-  });
-
-  cancelEditPreBtn.addEventListener("click", () => closeModal("editCasePreModal"));
-
-  // ---------------------------
-  // Edit Case Modal
-  // ---------------------------
-  const editAddStemBtn = document.getElementById("editAddStemBtn");
-  const editAddFlashcardBtn = document.getElementById("editAddFlashcardBtn");
-  const saveEditedCaseBtn = document.getElementById("saveEditedCaseBtn");
-  const cancelEditCaseBtn = document.getElementById("cancelEditCaseBtn");
-
-  editAddStemBtn.addEventListener("click", () => addStem("editStemsContainer"));
-  editAddFlashcardBtn.addEventListener("click", () =>
+// Edit Case Modal
+document
+  .getElementById("editAddStemBtn")
+  .addEventListener("click", () => addStem("editStemsContainer"));
+document
+  .getElementById("editAddFlashcardBtn")
+  .addEventListener("click", () =>
     addFlashcard("editFlashcardsContainer", editEditors)
   );
-  saveEditedCaseBtn.addEventListener("click", saveEditedCase);
-  cancelEditCaseBtn.addEventListener("click", () => closeModal("editCaseModal"));
+document
+  .getElementById("saveEditedCaseBtn")
+  .addEventListener("click", saveEditedCase);
+document
+  .getElementById("cancelEditCaseBtn")
+  .addEventListener("click", () => closeModal("editCaseModal"));
 
-  // ---------------------------
-  // Remove Case Modal
-  // ---------------------------
-  const removeCaseBtn = document.getElementById("removeCaseBtn");
-  const cancelRemoveBtn = document.getElementById("cancelRemoveCaseBtn");
-  const removeSelectedBtn = document.getElementById("removeSelectedBtn");
-  const removeSearchInput = document.getElementById("removeSearchInput");
-
-  initRemoveCaseModal(); // see previous snippet
-
-  removeCaseBtn.addEventListener("click", async () => {
-    removeSearchInput.value = "";
-    await renderRemoveGrid("");
-    openModal("removeCaseModal");
-  });
-
-  cancelRemoveBtn.addEventListener("click", () => closeModal("removeCaseModal"));
-
-  removeSearchInput.addEventListener("input", async () => {
-    await renderRemoveGrid(removeSearchInput.value.trim());
-  });
-
-  removeSelectedBtn.addEventListener("click", async () => {
-    const grid = document.getElementById("removeCaseGrid");
-    const selected = Array.from(grid.querySelectorAll(".select-card.selected"));
-    if (!selected.length) return;
-    if (!confirm(`Remove ${selected.length} case(s)?`)) return;
-
-    for (const card of selected) {
-      await deleteCaseFromSupabase(card.dataset.id);
-    }
-
-    await renderRemoveGrid(removeSearchInput.value.trim());
-    await rebuildHomeGrid();
-  });
-}
-
-// Initialize all modal listeners once
+// Remove Case Modal
+document.getElementById("removeCaseBtn").addEventListener("click", () => {
+  document.getElementById("removeSearchInput").value = "";
+  renderRemoveGrid("");
+  openModal("removeCaseModal");
+});
+document
+  .getElementById("cancelRemoveCaseBtn")
+  .addEventListener("click", () => closeModal("removeCaseModal"));
+document
+  .getElementById("removeSelectedBtn")
+  .addEventListener("click", confirmRemoveCases);
 initModals();
