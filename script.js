@@ -360,63 +360,120 @@ async function saveCase() {
 }
 
 // ---------------------------
-// Edit Case Flow
+// Edit Case Enhancements
 // ---------------------------
 
-// Show Edit Case Pre-screen
+// Open pre-modal
 document.getElementById("editCaseBtn").addEventListener("click", async () => {
   await renderEditCaseList();
   document.getElementById("editSearchInput").value = "";
   openModal("editCasePreModal");
 });
 
-// Cancel button for pre-modal
-document.getElementById("cancelEditPreBtn").addEventListener("click", () => {
-  closeModal("editCasePreModal");
+// Cancel buttons
+document.getElementById("cancelEditPreBtn").addEventListener("click", () => closeModal("editCasePreModal"));
+document.getElementById("cancelEditCaseBtn").addEventListener("click", () => closeModal("editCaseModal"));
+
+// Add stem in edit modal
+document.getElementById("editAddStemBtn").addEventListener("click", () => {
+  const container = document.getElementById("editStemsContainer");
+  const row = document.createElement("div");
+  row.className = "stem-row";
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "stem-input";
+
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.className = "icon-btn";
+  removeBtn.textContent = "×";
+  removeBtn.addEventListener("click", () => row.remove());
+
+  row.appendChild(input);
+  row.appendChild(removeBtn);
+  container.appendChild(row);
 });
 
-// Cancel button for edit modal
-document.getElementById("cancelEditCaseBtn").addEventListener("click", () => {
-  closeModal("editCaseModal");
+// Add flashcard in edit modal
+document.getElementById("editAddFlashcardBtn").addEventListener("click", () => {
+  addEditFlashcard(null);
 });
 
-// Render all cases in Edit Case Pre-screen
-async function renderEditCaseList() {
-  // Fetch cases if not already in memory
-  if (!homeCases.length) {
-    homeCases = await getCasesFromSupabase();
-  }
+// Helper: add a flashcard to Edit modal
+function addEditFlashcard(fcData) {
+  const container = document.getElementById("editFlashcardsContainer");
+  const div = document.createElement("div");
+  div.className = "flashcard collapsed"; // start collapsed
+  const header = document.createElement("div");
+  header.className = "flashcard-header";
 
-  const container = document.getElementById("editCaseList");
-  container.innerHTML = "";
+  const title = document.createElement("div");
+  title.className = "flashcard-header-title";
+  title.textContent = "Flashcard";
 
-  if (!homeCases.length) {
-    document.getElementById("editNoCases").hidden = false;
-    return;
-  } else {
-    document.getElementById("editNoCases").hidden = true;
-  }
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.className = "icon-btn";
+  removeBtn.textContent = "×";
+  removeBtn.addEventListener("click", () => {
+    editEditors.delete(div);
+    div.remove();
+  });
 
-  homeCases.forEach((c) => {
-    const card = document.createElement("div");
-    card.className = "select-card";
-    card.textContent = c.title;
-    card.addEventListener("click", () => loadCaseForEditing(c));
-    container.appendChild(card);
+  const toggleBtn = document.createElement("span");
+  toggleBtn.className = "chev";
+  toggleBtn.textContent = "▼";
+  toggleBtn.addEventListener("click", () => {
+    div.classList.toggle("collapsed");
+    toggleBtn.textContent = div.classList.contains("collapsed") ? "▼" : "▲";
+  });
+
+  header.appendChild(toggleBtn);
+  header.appendChild(title);
+  header.appendChild(removeBtn);
+  div.appendChild(header);
+
+  // Flashcard body
+  const body = document.createElement("div");
+  body.className = "flashcard-body";
+
+  const front = document.createElement("div");
+  front.className = "flash-side";
+  front.innerHTML = fcData?.front || "";
+  const back = document.createElement("div");
+  back.className = "flash-side";
+  back.innerHTML = fcData?.back || "";
+
+  // Image inputs
+  const frontFile = document.createElement("input");
+  frontFile.type = "file";
+  frontFile.className = "image-upload";
+  const backFile = document.createElement("input");
+  backFile.type = "file";
+  backFile.className = "image-upload";
+
+  body.appendChild(front);
+  body.appendChild(frontFile);
+  body.appendChild(back);
+  body.appendChild(backFile);
+
+  div.appendChild(body);
+  container.appendChild(div);
+
+  // Initialize Quill editors
+  editEditors.set(div, {
+    front: new Quill(front, { theme: "snow" }),
+    back: new Quill(back, { theme: "snow" }),
   });
 }
 
-// Load case into Edit Case modal
+// Load case into Edit modal
 async function loadCaseForEditing(caseObj) {
   currentEditingCaseId = caseObj.id;
-
-  // Clear previous editors
   editEditors.clear();
 
-  // Set title
   document.getElementById("editCaseTitle").value = caseObj.title;
-
-  // Clear stems and flashcards
   const stemsContainer = document.getElementById("editStemsContainer");
   stemsContainer.innerHTML = "<h3>Stems</h3>";
   const flashcardsContainer = document.getElementById("editFlashcardsContainer");
@@ -424,76 +481,61 @@ async function loadCaseForEditing(caseObj) {
 
   // Populate stems
   caseObj.stems.forEach((s) => {
+    const row = document.createElement("div");
+    row.className = "stem-row";
     const input = document.createElement("input");
     input.type = "text";
     input.className = "stem-input";
     input.value = s;
-    stemsContainer.appendChild(input);
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "icon-btn";
+    removeBtn.textContent = "×";
+    removeBtn.addEventListener("click", () => row.remove());
+    row.appendChild(input);
+    row.appendChild(removeBtn);
+    stemsContainer.appendChild(row);
   });
 
   // Populate flashcards
-  for (const fc of caseObj.flashcards) {
-    const flashDiv = document.createElement("div");
-    flashDiv.className = "flashcard";
-    // Front editor
-    const front = document.createElement("div");
-    front.className = "flash-side";
-    front.innerHTML = fc.front || "";
-    // Back editor
-    const back = document.createElement("div");
-    back.className = "flash-side";
-    back.innerHTML = fc.back || "";
-
-    flashDiv.appendChild(front);
-    flashDiv.appendChild(back);
-
-    flashcardsContainer.appendChild(flashDiv);
-
-    // Save Quill editors in map
-    editEditors.set(flashDiv, {
-      front: new Quill(front, { theme: "snow" }),
-      back: new Quill(back, { theme: "snow" }),
-    });
-  }
+  caseObj.flashcards.forEach((fc) => addEditFlashcard(fc));
 
   closeModal("editCasePreModal");
   openModal("editCaseModal");
 }
 
 // Save edited case
-document.getElementById("saveEditedCaseBtn").addEventListener("click", saveEditedCase);
-
-async function saveEditedCase() {
+document.getElementById("saveEditedCaseBtn").addEventListener("click", async () => {
   const title = document.getElementById("editCaseTitle").value.trim();
   if (!title) return alert("Please enter a case title.");
 
-  // Build stems array
   const stems = Array.from(document.querySelectorAll("#editStemsContainer .stem-input"))
     .map((i) => i.value.trim())
     .filter(Boolean);
 
-  // Build flashcards array
   const flashcards = [];
-  for (const [fcDiv, ed] of editEditors.entries()) {
+  for (const [div, ed] of editEditors.entries()) {
+    const [frontFile, backFile] = div.querySelectorAll(".image-upload");
+    let frontImage = null;
+    let backImage = null;
+    if (frontFile?.files[0]) frontImage = await uploadToSupabase(frontFile.files[0]);
+    if (backFile?.files[0]) backImage = await uploadToSupabase(backFile.files[0]);
     flashcards.push({
       front: ed.front.root.innerHTML,
       back: ed.back.root.innerHTML,
+      frontImage,
+      backImage
     });
   }
 
   const caseObj = { title, stems, flashcards };
-  console.log("DEBUG: Edited case object:", caseObj);
+  console.debug("DEBUG: Edited case object:", caseObj);
 
   try {
     const updatedCase = await updateCaseInSupabase(currentEditingCaseId, caseObj);
-    console.log("DEBUG: Updated case:", updatedCase);
-
     if (updatedCase) {
-      // Update in-memory array
       const index = homeCases.findIndex((c) => c.id === currentEditingCaseId);
       if (index > -1) homeCases[index] = updatedCase;
-
-      // Optionally, refresh your home DOM here
       closeModal("editCaseModal");
       alert("Case updated successfully!");
     }
@@ -501,7 +543,7 @@ async function saveEditedCase() {
     console.error("DEBUG: Error saving edited case:", err);
     alert("Failed to update case. Check console for details.");
   }
-}
+});
 
 // ---------------------------
 // Remove case
