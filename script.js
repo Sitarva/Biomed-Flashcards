@@ -129,24 +129,28 @@ async function rebuildHomeGrid() {
   const noResults = document.getElementById("noResults");
 
   // Fetch fresh cases from Supabase
-  const homeCases = await getCasesFromSupabase();
+  homeCases = await getCasesFromSupabase(); // update global array
 
   // Clear existing DOM
   casesContainer.querySelectorAll(".case-item").forEach(n => n.remove());
 
   // Add cards to DOM
-  homeCases.forEach(c => addCaseCardToDOM(c.title, c.id));
+  homeCases.forEach(c => addCaseCardToDOM(c)); // pass full object
 
   noResults.hidden = homeCases.length !== 0;
 }
 
-function addCaseCardToDOM(c) {  // Pass the whole case object
+function addCaseCardToDOM(c) {
+  const casesContainer = document.getElementById("casesContainer");
+  const noResults = document.getElementById("noResults");
+
   const div = document.createElement("div");
   div.className = "case-item";
   div.textContent = c.title;
   div.style.cursor = "pointer";
 
-  div.onclick = () => window.openCaseStudy(c); // Pass the case directly
+  // Pass the full case object to openCaseStudy
+  div.onclick = () => window.openCaseStudy(c);
 
   casesContainer.insertBefore(div, noResults);
 }
@@ -154,7 +158,7 @@ function addCaseCardToDOM(c) {  // Pass the whole case object
 // Search input
 document.getElementById("searchInput").addEventListener("input", function () {
   const q = this.value.trim().toLowerCase();
-  const items = Array.from(casesContainer.querySelectorAll(".case-item"));
+  const items = Array.from(document.getElementById("casesContainer").querySelectorAll(".case-item"));
   let visible = 0;
 
   items.forEach((it) => {
@@ -163,7 +167,7 @@ document.getElementById("searchInput").addEventListener("input", function () {
     if (match) visible++;
   });
 
-  noResults.hidden = visible !== 0;
+  document.getElementById("noResults").hidden = visible !== 0;
 });
 
 // ---------------------------
@@ -789,35 +793,31 @@ if (document.getElementById("editFlashcardsContainer")) {
     studyDeck(combinedDeck);
   });
 
-  window.openCaseStudy = async (index) => {
-    const cases = await getCasesFromSupabase();
-    const c = cases[index];
+  window.openCaseStudy = async (c) => {
+  const parsedFlashcards = Array.isArray(c.flashcards)
+    ? c.flashcards
+    : JSON.parse(c.flashcards || "[]");
 
-    const parsedFlashcards = Array.isArray(c.flashcards)
-      ? c.flashcards
-      : JSON.parse(c.flashcards || "[]");
+  if (!parsedFlashcards.length) return alert("No flashcards for this case.");
 
-    if (!parsedFlashcards.length) return alert("No flashcards for this case.");
+  const parsedStems = Array.isArray(c.stems)
+    ? c.stems
+    : JSON.parse(c.stems || "[]");
 
-    const parsedStems = Array.isArray(c.stems)
-      ? c.stems
-      : JSON.parse(c.stems || "[]");
+  const stem = parsedStems.length
+    ? parsedStems[Math.floor(Math.random() * parsedStems.length)]
+    : "";
 
-    const stem = parsedStems.length
-      ? parsedStems[Math.floor(Math.random() * parsedStems.length)]
-      : "";
+  const caseDeck = parsedFlashcards.map(fc => ({
+    stem,
+    frontHtml: fc.front || "",
+    backHtml: fc.back || "",
+    frontImage: fc.frontImage || null,
+    backImage: fc.backImage || null
+  }));
 
-    const caseDeck = parsedFlashcards.map(fc => ({
-      stem,
-      frontHtml: fc.front || "",
-      backHtml: fc.back || "",
-      frontImage: fc.frontImage || null,
-      backImage: fc.backImage || null
-    }));
-
-    studyDeck(caseDeck);
-  };
-})();
+  studyDeck(caseDeck);
+};
 
 // ---------------------------
 // Modal Button Listeners
