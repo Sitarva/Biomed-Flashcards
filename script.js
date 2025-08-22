@@ -289,6 +289,7 @@ function saveEditedCase() {
   )
     .map((i) => i.value.trim())
     .filter(Boolean);
+
   const flashcards = Array.from(
     document.querySelectorAll("#editFlashcardsContainer .flashcard")
   ).map((fc) => {
