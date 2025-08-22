@@ -491,57 +491,243 @@ function addEditFlashcard(flashcard = { front: "", back: "" }, index = Date.now(
   editEditors.set(fcDiv.dataset.cardId, { front: quillFront, back: quillBack });
 }
 
+async function updateCaseInSupabase(caseId, caseObj) {
+  const { data, error } = await supabaseClient
+    .from("cases")
+    .update({
+      title: caseObj.title,
+      stems: caseObj.stems,
+      flashcards: caseObj.flashcards
+    })
+    .eq("id", caseId)
+    .select();  // <--- Add this
+
+  if (error) {
+    console.error("Error updating case:", error);
+    return null;
+  }
+
+  return data[0];
+}
+
 // ---------------------------
-// Save Edited Case
+// Edit Case
 // ---------------------------
 
-async function saveEditedCase() {
-  const caseId = document.getElementById("saveEditedCaseBtn").dataset.caseId;
+let editEditors = new Map();
+let currentEditCaseId = null;
+
+// Open pre-modal
+document.getElementById("editCaseBtn").addEventListener("click", async () => {
+  document.getElementById("editSearchInput").value = "";
+  await renderEditCaseList("");
+  openModal("editCasePreModal");
+});
+
+// Filter cases in pre-modal
+document.getElementById("editSearchInput").addEventListener("input", async function () {
+  await renderEditCaseList(this.value.trim());
+});
+
+// Render cases in Edit pre-modal
+async function renderEditCaseList(query) {
+  const list = document.getElementById("editCaseList");
+  const noCasesMsg = document.getElementById("editNoCases");
+  list.innerHTML = "";
+
+  const cases = await getCasesFromSupabase(); // fetch all cases
+  const filtered = cases
+    .map((c) => ({ title: c.title, id: c.id }))
+    .filter((x) => x.title.toLowerCase().includes(query.toLowerCase()));
+
+  if (!filtered.length) {
+    noCasesMsg.hidden = false;
+    return;
+  }
+  noCasesMsg.hidden = true;
+
+  filtered.forEach((item) => {
+    const card = document.createElement("div");
+    card.className = "select-card";
+    card.textContent = item.title;
+    card.addEventListener("click", () => openCaseForEdit(item.id));
+    list.appendChild(card);
+  });
+}
+
+// Open Edit Case modal
+async function openCaseForEdit(caseId) {
+  closeModal("editCasePreModal");
+  editEditors = new Map();
+  currentEditCaseId = caseId;
+
+  const cases = await getCasesFromSupabase();
+  const c = cases.find((x) => x.id === caseId);
+  if (!c) return alert("Case not found.");
+
+  document.getElementById("editCaseTitle").value = c.title;
+
+  const stemsWrap = document.getElementById("editStemsContainer");
+  const fcsWrap = document.getElementById("editFlashcardsContainer");
+  stemsWrap.innerHTML = "<h3>Stems</h3>";
+  fcsWrap.innerHTML = "<h3>Flashcards</h3>";
+
+  // Add stems
+  c.stems.forEach((s) => addEditStem(s));
+
+  // Add flashcards
+  c.flashcards.forEach((fc) => addEditFlashcard(fc));
+
+  openModal("editCaseModal");
+}
+
+// Add stem helper
+function addEditStem(value = "") {
+  const container = document.getElementById("editStemsContainer");
+  const row = document.createElement("div");
+  row.className = "stem-row";
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "stem-input";
+  input.value = value;
+
+  const removeBtn = document.createElement("button");
+  removeBtn.className = "icon-btn";
+  removeBtn.textContent = "×";
+  removeBtn.addEventListener("click", () => row.remove());
+
+  row.append(input, removeBtn);
+  container.appendChild(row);
+}
+
+// Add flashcard helper
+function addEditFlashcard(flashcard = { front: "", back: "", frontImage: null, backImage: null }) {
+  const container = document.getElementById("editFlashcardsContainer");
+  const fcDiv = document.createElement("div");
+  fcDiv.className = "flashcard";
+  fcDiv.dataset.cardId = Date.now();
+
+  // Header with remove + collapse
+  const header = document.createElement("div");
+  header.className = "flashcard-header";
+  header.innerHTML = `<div class="flashcard-header-title">Flashcard</div>`;
+  const removeBtn = document.createElement("button");
+  removeBtn.className = "icon-btn";
+  removeBtn.textContent = "×";
+  removeBtn.addEventListener("click", () => fcDiv.remove());
+  header.appendChild(removeBtn);
+  header.addEventListener("click", () => fcDiv.classList.toggle("collapsed"));
+
+  // Body
+  const body = document.createElement("div");
+  body.className = "flashcard-body";
+
+  // Front side
+  const frontDiv = document.createElement("div");
+  frontDiv.className = "flash-side front";
+  if (flashcard.frontImage) {
+    const img = document.createElement("img");
+    img.src = flashcard.frontImage;
+    img.className = "flash-image";
+    frontDiv.appendChild(img);
+  }
+  body.appendChild(frontDiv);
+
+  // Back side
+  const backDiv = document.createElement("div");
+  backDiv.className = "flash-side back";
+  if (flashcard.backImage) {
+    const img = document.createElement("img");
+    img.src = flashcard.backImage;
+    img.className = "flash-image";
+    backDiv.appendChild(img);
+  }
+  body.appendChild(backDiv);
+
+  // File inputs
+  const frontFileInput = document.createElement("input");
+  frontFileInput.type = "file";
+  frontFileInput.className = "image-upload";
+  body.appendChild(frontFileInput);
+
+  const backFileInput = document.createElement("input");
+  backFileInput.type = "file";
+  backFileInput.className = "image-upload";
+  body.appendChild(backFileInput);
+
+  fcDiv.append(header, body);
+  container.appendChild(fcDiv);
+
+  // Initialize Quill editors
+  const quillFront = new Quill(frontDiv, { theme: "snow" });
+  quillFront.root.innerHTML = flashcard.front || "";
+  const quillBack = new Quill(backDiv, { theme: "snow" });
+  quillBack.root.innerHTML = flashcard.back || "";
+
+  editEditors.set(fcDiv.dataset.cardId, { front: quillFront, back: quillBack });
+}
+
+// Add buttons
+document.getElementById("editAddStemBtn").addEventListener("click", () => addEditStem());
+document.getElementById("editAddFlashcardBtn").addEventListener("click", () => addEditFlashcard());
+
+// Save edited case
+document.getElementById("saveEditedCaseBtn").addEventListener("click", async () => {
+  if (!currentEditCaseId) return;
+
   const title = document.getElementById("editCaseTitle").value.trim();
   if (!title) return alert("Please enter a case title.");
 
-  // Collect stems
-  const stems = Array.from(
-    document.querySelectorAll("#editStemsContainer .stem-input")
-  )
+  const stems = Array.from(document.querySelectorAll("#editStemsContainer .stem-input"))
     .map((i) => i.value.trim())
     .filter(Boolean);
 
-  // Collect flashcards
   const flashcards = [];
   for (const fc of document.querySelectorAll("#editFlashcardsContainer .flashcard")) {
     const id = fc.dataset.cardId;
     const ed = editEditors.get(id);
+    const [frontFileInput, backFileInput] = fc.querySelectorAll(".image-upload");
+
+    let frontImage = null;
+    let backImage = null;
+    if (frontFileInput && frontFileInput.files[0]) {
+      frontImage = await uploadToSupabase(frontFileInput.files[0]);
+    }
+    if (backFileInput && backFileInput.files[0]) {
+      backImage = await uploadToSupabase(backFileInput.files[0]);
+    }
 
     flashcards.push({
       front: ed ? ed.front.root.innerHTML : "",
       back: ed ? ed.back.root.innerHTML : "",
+      frontImage,
+      backImage
     });
   }
 
   const caseObj = { title, stems, flashcards };
-  console.debug("DEBUG: Edited case object:", caseObj);
-
   try {
-    const updatedCase = await updateCaseInSupabase(caseId, caseObj);
-    console.debug("DEBUG: Updated case returned:", updatedCase);
+    const updatedCase = await updateCaseInSupabase(currentEditCaseId, caseObj);
 
     if (!updatedCase) throw new Error("Supabase update returned null");
 
-    // Update local DOM
-    const idx = homeCases.findIndex((c) => c.id === caseId);
+    // Update local grid
+    const idx = homeCases.findIndex((c) => c.id === currentEditCaseId);
     if (idx > -1) homeCases[idx] = updatedCase;
-
+    rebuildHomeGrid();
     closeModal("editCaseModal");
     alert("Case updated successfully!");
   } catch (err) {
-    console.error("DEBUG: Error saving edited case:", err);
-    alert("Failed to save edited case. Check console for details.");
+    console.error("Error saving edited case:", err);
+    alert("Failed to save edited case.");
   }
-}
+});
 
-// Attach listener to Save Changes button
-document.getElementById("saveEditedCaseBtn").addEventListener("click", saveEditedCase);
+// Cancel button
+document.getElementById("cancelEditCaseBtn").addEventListener("click", () => {
+  closeModal("editCaseModal");
+});
 
 // ---------------------------
 // Remove case
