@@ -500,16 +500,36 @@ input[type="text"]:focus {
   max-width: 100%;
   max-height: 200px;
 }
-/* Increase flashcard size on small screens */
-@media (max-width: 600px) {
+/* Small screens */
+@media (max-width: 880px) {
   .flip-card {
-    width: 90%;        /* take most of modal width */
-    max-width: none;   /* remove the desktop max-width */
-    min-height: 300px; /* keep height reasonable */
+    width: 90%;        /* almost full modal width */
+    max-width: none;   /* remove desktop constraint */
+    min-height: 350px; /* taller for readability */
   }
   .flip-card-front,
   .flip-card-back {
-    min-height: 300px; /* match container */
+    min-height: 350px;
+  }
+  .flash-image {
+    max-height: 250px; /* images scale nicely */
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+  .flip-card {
+    width: 95%;
+    min-height: 320px;
+  }
+  .flip-card-front,
+  .flip-card-back {
+    min-height: 320px;
+  }
+  .flash-image {
+    max-height: 200px;
+  }
+}
   }
   .flash-image {
     max-height: 300px; /* allow images to scale bigger */
