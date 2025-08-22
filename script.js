@@ -18,6 +18,18 @@ function closeModal(id) {
 }
 
 // ---------------------------
+// Helper: Convert file to Base64
+// ---------------------------
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = (e) => reject(e);
+    reader.readAsDataURL(file);
+  });
+}
+
+// ---------------------------
 // Home grid
 // ---------------------------
 function getCases() {
@@ -174,7 +186,7 @@ document.getElementById("addCaseBtn").addEventListener("click", () => {
   openModal("addCaseModal");
 });
 
-function saveCase() {
+async function saveCase() {
   const title = document.getElementById("caseTitle").value.trim();
   if (!title) return alert("Please enter a case title.");
 
@@ -184,25 +196,28 @@ function saveCase() {
     .map((i) => i.value.trim())
     .filter(Boolean);
 
-  const flashcards = Array.from(
-    document.querySelectorAll("#flashcardsContainer .flashcard")
-  ).map((fc) => {
+  const flashcards = [];
+  for (const fc of document.querySelectorAll("#flashcardsContainer .flashcard")) {
     const id = fc.dataset.cardId;
     const ed = addEditors.get(id);
-    const [frontFile, backFile] = fc.querySelectorAll(".image-upload");
-    return {
+    const [frontFileInput, backFileInput] = fc.querySelectorAll(".image-upload");
+
+    let frontImage = null;
+    let backImage = null;
+    if (frontFileInput && frontFileInput.files[0]) {
+      frontImage = await fileToBase64(frontFileInput.files[0]);
+    }
+    if (backFileInput && backFileInput.files[0]) {
+      backImage = await fileToBase64(backFileInput.files[0]);
+    }
+
+    flashcards.push({
       front: ed ? ed.front.root.innerHTML : "",
       back: ed ? ed.back.root.innerHTML : "",
-      frontImage:
-        frontFile && frontFile.files[0]
-          ? URL.createObjectURL(frontFile.files[0])
-          : null,
-      backImage:
-        backFile && backFile.files[0]
-          ? URL.createObjectURL(backFile.files[0])
-          : null,
-    };
-  });
+      frontImage,
+      backImage
+    });
+  }
 
   const cases = getCases();
   cases.push({ title, stems, flashcards });
@@ -278,7 +293,7 @@ function openCaseForEdit(index) {
   openModal("editCaseModal");
 }
 
-function saveEditedCase() {
+async function saveEditedCase() {
   if (currentEditIndex === null) return;
   const cases = getCases();
   const title = document.getElementById("editCaseTitle").value.trim();
@@ -290,25 +305,28 @@ function saveEditedCase() {
     .map((i) => i.value.trim())
     .filter(Boolean);
 
-  const flashcards = Array.from(
-    document.querySelectorAll("#editFlashcardsContainer .flashcard")
-  ).map((fc) => {
+  const flashcards = [];
+  for (const fc of document.querySelectorAll("#editFlashcardsContainer .flashcard")) {
     const id = fc.dataset.cardId;
     const ed = editEditors.get(id);
-    const [frontFile, backFile] = fc.querySelectorAll(".image-upload");
-    return {
+    const [frontFileInput, backFileInput] = fc.querySelectorAll(".image-upload");
+
+    let frontImage = null;
+    let backImage = null;
+    if (frontFileInput && frontFileInput.files[0]) {
+      frontImage = await fileToBase64(frontFileInput.files[0]);
+    }
+    if (backFileInput && backFileInput.files[0]) {
+      backImage = await fileToBase64(backFileInput.files[0]);
+    }
+
+    flashcards.push({
       front: ed ? ed.front.root.innerHTML : "",
       back: ed ? ed.back.root.innerHTML : "",
-      frontImage:
-        frontFile && frontFile.files[0]
-          ? URL.createObjectURL(frontFile.files[0])
-          : null,
-      backImage:
-        backFile && backFile.files[0]
-          ? URL.createObjectURL(backFile.files[0])
-          : null,
-    };
-  });
+      frontImage,
+      backImage
+    });
+  }
 
   cases[currentEditIndex] = { title, stems, flashcards };
   setCases(cases);
