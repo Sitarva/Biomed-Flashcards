@@ -1,4 +1,35 @@
 // ---------------------------
+// Supabase Integration
+// ---------------------------
+const supabaseUrl = "https://ucqoiltqcblrwkltglos.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVjcW9pbHRxY2JscndrbHRnbG9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3Nzc1NTUsImV4cCI6MjA3MTM1MzU1NX0.d9nusguupaLupLRa1Yn7pBAgzJ9d2eU4Sx-SrgRAFcI";
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+const IMAGES_BUCKET = "flashcards-images";
+
+// ---------------------------
+// Helper: Upload file to Supabase Storage
+// ---------------------------
+async function uploadFileToSupabase(file) {
+  if (!file) return null;
+  const fileExt = file.name.split(".").pop();
+  const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+  const { data, error } = await supabase.storage
+    .from(IMAGES_BUCKET)
+    .upload(fileName, file);
+  if (error) {
+    console.error("Supabase upload error:", error);
+    return null;
+  }
+  // Return public URL
+  const { publicUrl, error: urlError } = supabase.storage.from(IMAGES_BUCKET).getPublicUrl(fileName);
+  if (urlError) {
+    console.error("Supabase public URL error:", urlError);
+    return null;
+  }
+  return publicUrl;
+}
+
+// ---------------------------
 // Utilities & State
 // ---------------------------
 const casesContainer = document.getElementById("casesContainer");
