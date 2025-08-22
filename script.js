@@ -220,12 +220,10 @@ function addFlashcard(containerId, mapRef) {
       <div class="flash-side">
         <div class="label-inline">Front:</div>
         <div id="${id}-front" class="quill-editor"></div>
-        <input type="file" accept="image/*" class="image-upload" onchange="previewImage(this)"/>
       </div>
       <div class="flash-side">
         <div class="label-inline">Back:</div>
         <div id="${id}-back" class="quill-editor"></div>
-        <input type="file" accept="image/*" class="image-upload" onchange="previewImage(this)"/>
       </div>
     </div>
   `;
@@ -463,12 +461,10 @@ function addFlashcard(containerId, mapRef, fcData = {}) {
       <div class="flash-side">
         <div class="label-inline">Front:</div>
         <div id="${id}-front" class="quill-editor"></div>
-        <input type="file" accept="image/*" class="image-upload" onchange="previewImage(this)"/>
       </div>
       <div class="flash-side">
         <div class="label-inline">Back:</div>
         <div id="${id}-back" class="quill-editor"></div>
-        <input type="file" accept="image/*" class="image-upload" onchange="previewImage(this)"/>
       </div>
     </div>
   `;
