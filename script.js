@@ -753,42 +753,68 @@ if (document.getElementById("editFlashcardsContainer")) {
   nextBtn.onclick = () => { if (pos < deck.length - 1) { pos++; renderCard(); } };
   closeBtn.onclick = () => modal.hidden = true;
 
-  startBtn?.addEventListener("click", (e) => {
+  startBtn?.addEventListener("click", async (e) => {
     e.preventDefault();
-    const cases = getCasesFromSupabase();
-    console.log("Fetched cases:", cases);
+    const cases = await getCasesFromSupabase();
     if (!cases.length) return alert("No flashcards found.");
 
     shuffleArray(cases);
     const combinedDeck = [];
     cases.forEach(c => {
-      if (!c.flashcards?.length) return;
-      const stem = c.stems?.length ? c.stems[Math.floor(Math.random() * c.stems.length)] : "";
-      c.flashcards.forEach(fc => combinedDeck.push({
-        stem,
-        frontHtml: fc.front || "",
-        backHtml: fc.back || "",
-        frontImage: fc.frontImage || null,
-        backImage: fc.backImage || null
-      }));
+      const parsedFlashcards = Array.isArray(c.flashcards)
+        ? c.flashcards
+        : JSON.parse(c.flashcards || "[]");
+
+      if (!parsedFlashcards.length) return;
+
+      const parsedStems = Array.isArray(c.stems)
+        ? c.stems
+        : JSON.parse(c.stems || "[]");
+
+      const stem = parsedStems.length
+        ? parsedStems[Math.floor(Math.random() * parsedStems.length)]
+        : "";
+
+      parsedFlashcards.forEach(fc =>
+        combinedDeck.push({
+          stem,
+          frontHtml: fc.front || "",
+          backHtml: fc.back || "",
+          frontImage: fc.frontImage || null,
+          backImage: fc.backImage || null
+        })
+      );
     });
 
     studyDeck(combinedDeck);
   });
 
-  window.openCaseStudy = (index) => {
-    const cases = getCasesFromSupabase();
+  window.openCaseStudy = async (index) => {
+    const cases = await getCasesFromSupabase();
     const c = cases[index];
-    if (!c?.flashcards?.length) return alert("No flashcards for this case.");
 
-    const stem = c.stems?.length ? c.stems[Math.floor(Math.random() * c.stems.length)] : "";
-    const caseDeck = c.flashcards.map(fc => ({
+    const parsedFlashcards = Array.isArray(c.flashcards)
+      ? c.flashcards
+      : JSON.parse(c.flashcards || "[]");
+
+    if (!parsedFlashcards.length) return alert("No flashcards for this case.");
+
+    const parsedStems = Array.isArray(c.stems)
+      ? c.stems
+      : JSON.parse(c.stems || "[]");
+
+    const stem = parsedStems.length
+      ? parsedStems[Math.floor(Math.random() * parsedStems.length)]
+      : "";
+
+    const caseDeck = parsedFlashcards.map(fc => ({
       stem,
       frontHtml: fc.front || "",
       backHtml: fc.back || "",
       frontImage: fc.frontImage || null,
       backImage: fc.backImage || null
     }));
+
     studyDeck(caseDeck);
   };
 })();
