@@ -503,7 +503,7 @@ function renumberStems(container) {
 // ---------------------------
 // Add flashcard for Edit
 // ---------------------------
-function addFlashcard(containerId, mapRef, fc = null) {
+function addFlashcard(containerId, mapRef, fc = { front: "", back: "", frontImage: null, backImage: null }) {
   const container = document.getElementById(containerId);
   const visibleIndex = container.querySelectorAll(".flashcard").length + 1;
   const id = uid();
@@ -511,6 +511,10 @@ function addFlashcard(containerId, mapRef, fc = null) {
   const card = document.createElement("div");
   card.className = "flashcard";
   card.dataset.cardId = id;
+
+  // Check if front/back already contain an <img>
+  const frontImgHTML = fc.frontImage && !fc.front.includes("<img") ? fc.frontImage : null;
+  const backImgHTML  = fc.backImage && !fc.back.includes("<img") ? fc.backImage : null;
 
   card.innerHTML = `
     <div class="flashcard-header">
@@ -524,25 +528,24 @@ function addFlashcard(containerId, mapRef, fc = null) {
         <div class="label-inline">Front:</div>
         <div id="${id}-front" class="quill-editor"></div>
         <input type="file" accept="image/*" class="image-upload" onchange="previewImage(this)"/>
-        <img style="width:150px;height:auto;" ${fc?.frontImage ? `src="${fc.frontImage}"` : ""} />
+        ${frontImgHTML ? `<img src="${frontImgHTML}" style="width:150px;height:auto;" />` : ""}
       </div>
       <div class="flash-side">
         <div class="label-inline">Back:</div>
         <div id="${id}-back" class="quill-editor"></div>
         <input type="file" accept="image/*" class="image-upload" onchange="previewImage(this)"/>
-        <img style="width:150px;height:auto;" ${fc?.backImage ? `src="${fc.backImage}"` : ""} />
+        ${backImgHTML ? `<img src="${backImgHTML}" style="width:150px;height:auto;" />` : ""}
       </div>
     </div>
   `;
 
+  // Handle remove button and collapse toggle
   const removeBtn = card.querySelector(".flashcard-header .icon-btn");
   const header = card.querySelector(".flashcard-header");
-
   removeBtn.onclick = (e) => {
     e.stopPropagation();
     removeFlashcard(card, container, mapRef);
   };
-
   header.onclick = (e) => {
     if (e.target === removeBtn) return;
     card.classList.toggle("collapsed");
@@ -551,15 +554,14 @@ function addFlashcard(containerId, mapRef, fc = null) {
 
   container.appendChild(card);
 
-  const front = new Quill(`#${id}-front`, { theme: "snow" });
-  const back = new Quill(`#${id}-back`, { theme: "snow" });
-  mapRef.set(id, { front, back });
+  // Initialize Quill editors
+  const frontEditor = new Quill(`#${id}-front`, { theme: "snow" });
+  const backEditor = new Quill(`#${id}-back`, { theme: "snow" });
+  frontEditor.root.innerHTML = fc.front || "";
+  backEditor.root.innerHTML = fc.back || "";
 
-  // Initialize existing content
-  if (fc) {
-    front.root.innerHTML = fc.front || "";
-    back.root.innerHTML = fc.back || "";
-  }
+  // Store in map
+  mapRef.set(id, { front: frontEditor, back: backEditor });
 }
 
 function removeFlashcard(card, container, mapRef) {
