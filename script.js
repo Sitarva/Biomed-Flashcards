@@ -77,7 +77,8 @@ async function updateCaseInSupabase(caseId, caseObj) {
       stems: caseObj.stems,
       flashcards: caseObj.flashcards
     })
-    .eq("id", caseId);
+    .eq("id", caseId)
+    .select();
 
   if (error) {
     console.error("Error updating case:", error);
@@ -284,8 +285,10 @@ async function previewImage(input) {
 }
 
 // ---------------------------
-// Add Case (with debug)
+// Add Case
 // ---------------------------
+
+// Clear & open modal
 document.getElementById("addCaseBtn").addEventListener("click", () => {
   addEditors = new Map();
   document.getElementById("caseTitle").value = "";
@@ -294,19 +297,25 @@ document.getElementById("addCaseBtn").addEventListener("click", () => {
   openModal("addCaseModal");
 });
 
-async function saveCase() {
-  try {
-    const title = document.getElementById("caseTitle").value.trim();
-    if (!title) return alert("Please enter a case title.");
+// Attach Save Case listener once
+const saveCaseBtn = document.getElementById("saveCaseBtn");
+saveCaseBtn.replaceWith(saveCaseBtn.cloneNode(true)); // remove any previous listeners
+document.getElementById("saveCaseBtn").addEventListener("click", saveCase);
 
+async function saveCase() {
+  const title = document.getElementById("caseTitle").value.trim();
+  if (!title) return alert("Please enter a case title.");
+
+  try {
+    // Collect stems
     const stems = Array.from(
       document.querySelectorAll("#stemsContainer .stem-input")
     )
       .map((i) => i.value.trim())
       .filter(Boolean);
 
+    // Collect flashcards
     const flashcards = [];
-
     for (const fc of document.querySelectorAll("#flashcardsContainer .flashcard")) {
       const id = fc.dataset.cardId;
       const ed = addEditors.get(id);
@@ -315,7 +324,6 @@ async function saveCase() {
       let frontImage = null;
       let backImage = null;
 
-      // Supabase upload instead of Base64
       if (frontFileInput && frontFileInput.files[0]) {
         frontImage = await uploadToSupabase(frontFileInput.files[0]);
       }
@@ -324,32 +332,28 @@ async function saveCase() {
       }
 
       flashcards.push({
-        front: ed?.front?.root?.innerHTML || "",
-        back: ed?.back?.root?.innerHTML || "",
+        front: ed ? ed.front.root.innerHTML : "",
+        back: ed ? ed.back.root.innerHTML : "",
         frontImage,
         backImage
       });
     }
 
-    // DEBUG: log everything before sending to Supabase
-    console.log("DEBUG: Case object to save:", { title, stems, flashcards });
+    const caseObj = { title, stems, flashcards };
+    console.debug("DEBUG: Case object to save:", caseObj);
 
     // Save to Supabase
-    const savedCase = await saveCaseToSupabase({ title, stems, flashcards });
+    const savedCase = await saveCaseToSupabase(caseObj);
+    console.debug("DEBUG: Saved case returned from Supabase:", savedCase);
 
-    if (!savedCase) {
-      console.error("DEBUG: saveCaseToSupabase returned null!");
-      return;
-    }
-
-    console.log("DEBUG: Saved case returned from Supabase:", savedCase);
+    if (!savedCase) throw new Error("Supabase save returned null");
 
     // Update local DOM
-    homeCases.push(savedCase); // push Supabase object
+    homeCases.push(savedCase);
     addCaseCardToDOM(savedCase.title, savedCase.id);
     noResults.hidden = true;
-
     closeModal("addCaseModal");
+
   } catch (err) {
     console.error("DEBUG: Error in saveCase:", err);
   }
