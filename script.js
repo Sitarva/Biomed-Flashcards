@@ -235,11 +235,13 @@ async function saveCase() {
 
     let frontImage = null;
     let backImage = null;
+
+    // ✅ Supabase upload instead of Base64
     if (frontFileInput && frontFileInput.files[0]) {
-      frontImage = await fileToBase64(frontFileInput.files[0]);
+      frontImage = await uploadToSupabase(frontFileInput.files[0]);
     }
     if (backFileInput && backFileInput.files[0]) {
-      backImage = await fileToBase64(backFileInput.files[0]);
+      backImage = await uploadToSupabase(backFileInput.files[0]);
     }
 
     flashcards.push({
@@ -324,48 +326,7 @@ function openCaseForEdit(index) {
   openModal("editCaseModal");
 }
 
-async function saveCase() {
-  const title = document.getElementById("caseTitle").value.trim();
-  if (!title) return alert("Please enter a case title.");
 
-  const stems = Array.from(
-    document.querySelectorAll("#stemsContainer .stem-input")
-  )
-    .map((i) => i.value.trim())
-    .filter(Boolean);
-
-  const flashcards = [];
-  for (const fc of document.querySelectorAll("#flashcardsContainer .flashcard")) {
-    const id = fc.dataset.cardId;
-    const ed = addEditors.get(id);
-    const [frontFileInput, backFileInput] = fc.querySelectorAll(".image-upload");
-
-    let frontImage = null;
-    let backImage = null;
-
-    // ✅ Supabase upload instead of Base64
-    if (frontFileInput && frontFileInput.files[0]) {
-      frontImage = await uploadToSupabase(frontFileInput.files[0]);
-    }
-    if (backFileInput && backFileInput.files[0]) {
-      backImage = await uploadToSupabase(backFileInput.files[0]);
-    }
-
-    flashcards.push({
-      front: ed ? ed.front.root.innerHTML : "",
-      back: ed ? ed.back.root.innerHTML : "",
-      frontImage,
-      backImage
-    });
-  }
-
-  const cases = getCases();
-  cases.push({ title, stems, flashcards });
-  setCases(cases);
-  addCaseCardToDOM(title, cases.length - 1);
-  noResults.hidden = true;
-  closeModal("addCaseModal");
-}
 
 // ---------------------------
 // Remove case
