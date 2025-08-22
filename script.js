@@ -716,6 +716,7 @@ if (document.getElementById("editFlashcardsContainer")) {
 
     shuffleArray(cases);
     const combinedDeck = [];
+
     cases.forEach(c => {
       const parsedFlashcards = Array.isArray(c.flashcards)
         ? c.flashcards
@@ -745,31 +746,33 @@ if (document.getElementById("editFlashcardsContainer")) {
     studyDeck(combinedDeck);
   });
 
-  window.openCaseStudy = async (c) => {
-  const parsedFlashcards = Array.isArray(c.flashcards)
-    ? c.flashcards
-    : JSON.parse(c.flashcards || "[]");
+  // Pass the whole case object instead of index
+  window.openCaseStudy = (c) => {
+    const parsedFlashcards = Array.isArray(c.flashcards)
+      ? c.flashcards
+      : JSON.parse(c.flashcards || "[]");
 
-  if (!parsedFlashcards.length) return alert("No flashcards for this case.");
+    if (!parsedFlashcards.length) return alert("No flashcards for this case.");
 
-  const parsedStems = Array.isArray(c.stems)
-    ? c.stems
-    : JSON.parse(c.stems || "[]");
+    const parsedStems = Array.isArray(c.stems)
+      ? c.stems
+      : JSON.parse(c.stems || "[]");
 
-  const stem = parsedStems.length
-    ? parsedStems[Math.floor(Math.random() * parsedStems.length)]
-    : "";
+    const stem = parsedStems.length
+      ? parsedStems[Math.floor(Math.random() * parsedStems.length)]
+      : "";
 
-  const caseDeck = parsedFlashcards.map(fc => ({
-    stem,
-    frontHtml: fc.front || "",
-    backHtml: fc.back || "",
-    frontImage: fc.frontImage || null,
-    backImage: fc.backImage || null
-  }));
+    const caseDeck = parsedFlashcards.map(fc => ({
+      stem,
+      frontHtml: fc.front || "",
+      backHtml: fc.back || "",
+      frontImage: fc.frontImage || null,
+      backImage: fc.backImage || null
+    }));
 
-  studyDeck(caseDeck);
-};
+    studyDeck(caseDeck);
+  };
+})();
 
 // ---------------------------
 // Modal Button Listeners
