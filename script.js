@@ -589,58 +589,82 @@ function removeFlashcard(card, container, mapRef) {
 }
 
 // ---------------------------
-// Remove Case
+// Remove Case Modal (fixed)
 // ---------------------------
-
-// Open Remove Case Modal
-document.getElementById("removeCaseBtn").addEventListener("click", async () => {
-  document.getElementById("removeSearchInput").value = "";
-  await renderRemoveGrid(""); // fetch fresh cases
-  openModal("removeCaseModal");
-});
-
-// Cancel button
-document.getElementById("cancelRemoveCaseBtn").addEventListener("click", () =>
-  closeModal("removeCaseModal")
-);
-
-// Search input
-document.getElementById("removeSearchInput").addEventListener("input", async function () {
-  await renderRemoveGrid(this.value.trim());
-});
-
-// Render Remove Grid
-async function renderRemoveGrid(query) {
+function initRemoveCaseModal() {
+  const removeBtn = document.getElementById("removeSelectedBtn");
+  const removeInput = document.getElementById("removeSearchInput");
+  const removeCaseBtn = document.getElementById("removeCaseBtn");
+  const cancelBtn = document.getElementById("cancelRemoveCaseBtn");
   const grid = document.getElementById("removeCaseGrid");
   const empty = document.getElementById("removeNoCases");
-  const removeBtn = document.getElementById("removeSelectedBtn");
 
-  removeBtn.disabled = true;
-  grid.innerHTML = ""; // Clear previous entries
-
-  const cases = await getCasesFromSupabase(); // fresh fetch
-  const filtered = cases.filter(c => c.title.toLowerCase().includes(query.toLowerCase()));
-
-  if (filtered.length === 0) {
-    empty.hidden = false;
-    return;
-  }
-  empty.hidden = true;
-
-  filtered.forEach(c => {
-    const card = document.createElement("div");
-    card.className = "select-card";
-    card.textContent = c.title;
-    card.dataset.id = c.id; // Supabase case ID
-
-    card.onclick = () => {
-      card.classList.toggle("selected");
-      removeBtn.disabled = grid.querySelectorAll(".select-card.selected").length === 0;
-    };
-
-    grid.appendChild(card);
+  // Open modal
+  removeCaseBtn.addEventListener("click", async () => {
+    removeInput.value = "";
+    await renderRemoveGrid("");
+    openModal("removeCaseModal");
   });
+
+  // Cancel button
+  cancelBtn.addEventListener("click", () => closeModal("removeCaseModal"));
+
+  // Search input
+  removeInput.addEventListener("input", async () => {
+    await renderRemoveGrid(removeInput.value.trim());
+  });
+
+  // Remove selected cases
+  removeBtn.addEventListener("click", async () => {
+    const selected = Array.from(grid.querySelectorAll(".select-card.selected"));
+    if (!selected.length) return;
+
+    if (!confirm(`Remove ${selected.length} case(s)?`)) return;
+
+    for (const card of selected) {
+      await deleteCaseFromSupabase(card.dataset.id);
+    }
+
+    // Refresh Remove Grid and Home Grid
+    await renderRemoveGrid(removeInput.value.trim());
+    await rebuildHomeGrid();
+  });
+
+  // Render Remove Grid
+  async function renderRemoveGrid(query = "") {
+    removeBtn.disabled = true;
+    grid.innerHTML = ""; // clear existing
+
+    const cases = await getCasesFromSupabase();
+    const filtered = cases.filter(c => c.title.toLowerCase().includes(query.toLowerCase()));
+
+    if (!filtered.length) {
+      empty.hidden = false;
+      return;
+    }
+    empty.hidden = true;
+
+    filtered.forEach(c => {
+      const card = document.createElement("div");
+      card.className = "select-card";
+      card.textContent = c.title;
+      card.dataset.id = c.id;
+
+      card.onclick = () => {
+        card.classList.toggle("selected");
+        removeBtn.disabled = grid.querySelectorAll(".select-card.selected").length === 0;
+      };
+
+      grid.appendChild(card);
+    });
+  }
+
+  // Expose renderRemoveGrid for external calls
+  window.renderRemoveGrid = renderRemoveGrid;
 }
+
+// Initialize once
+initRemoveCaseModal();
 
 // Remove Selected Cases
 document.getElementById("removeSelectedBtn").addEventListener("click", async () => {
