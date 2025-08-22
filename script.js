@@ -140,13 +140,13 @@ async function rebuildHomeGrid() {
   noResults.hidden = homeCases.length !== 0;
 }
 
-function addCaseCardToDOM(title, caseId) {
+function addCaseCardToDOM(c) {  // Pass the whole case object
   const div = document.createElement("div");
   div.className = "case-item";
-  div.textContent = title;
+  div.textContent = c.title;
   div.style.cursor = "pointer";
 
-  div.onclick = () => window.openCaseStudy(i);
+  div.onclick = () => window.openCaseStudy(c); // Pass the case directly
 
   casesContainer.insertBefore(div, noResults);
 }
