@@ -30,6 +30,33 @@ async function uploadFileToSupabase(file) {
 }
 
 // ---------------------------
+// Supabase Test Upload
+// ---------------------------
+async function testSupabaseUpload(file) {
+  const IMAGES_BUCKET = "flashcards-images";
+  if (!file) return console.warn("No file provided for test upload.");
+
+  const fileExt = file.name.split('.').pop();
+  const fileName = `test-${Date.now()}.${fileExt}`;
+
+  const { data, error } = await supabase.storage.from(IMAGES_BUCKET).upload(fileName, file);
+  if (error) return console.error("Upload failed:", error);
+
+  const { publicUrl, error: urlError } = supabase.storage.from(IMAGES_BUCKET).getPublicUrl(fileName);
+  if (urlError) return console.error("Public URL failed:", urlError);
+
+  console.log("✅ Supabase upload successful! URL:", publicUrl);
+  alert(`Test upload done! Check console for URL: ${publicUrl}`);
+}
+
+// Example: attach to a button for testing
+document.getElementById("testUploadBtn")?.addEventListener("click", async () => {
+  const fileInput = document.querySelector(".image-upload"); // pick first flashcard image input
+  if (!fileInput?.files?.[0]) return alert("Select a file in a flashcard first!");
+  await testSupabaseUpload(fileInput.files[0]);
+});
+
+// ---------------------------
 // Utilities & State
 // ---------------------------
 const casesContainer = document.getElementById("casesContainer");
