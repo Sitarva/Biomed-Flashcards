@@ -546,6 +546,6 @@ input[type="text"]:focus {
 @media (max-width: 600px) {
   .flip-card .flash-side,
   .flip-card .content-body {
-    font-size: 0.85rem;
+    font-size: 0.8rem !important;
   }
 }
