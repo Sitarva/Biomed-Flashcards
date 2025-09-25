@@ -549,3 +549,7 @@ input[type="text"]:focus {
     font-size: 0.8rem !important;
   }
 }
+.flip-card .content-body,
+.flip-card .flash-side {
+  white-space: pre-wrap;
+}
