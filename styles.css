@@ -553,3 +553,9 @@ input[type="text"]:focus {
 .flip-card .flash-side {
   white-space: pre-wrap;
 }
+/* If you want the entire flashcard text to match the editor's spacing */
+.flip-card .content-body,
+.flip-card .flash-side {
+  white-space: pre-wrap;
+  line-height: 1.2;       /* or whatever feels right */
+}
